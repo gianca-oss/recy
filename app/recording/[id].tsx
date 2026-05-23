@@ -267,7 +267,7 @@ export default function RecordingDetailScreen() {
     );
   }
 
-  async function exportText(content: string, suffix: 'raw' | 'summary', ext: 'txt' | 'md') {
+  async function exportText(content: string, suffix: 'raw' | 'summary' | 'full', ext: 'txt' | 'md') {
     if (!recording) return;
     const safeTitle = (recording.title || 'registrazione')
       .replace(/[\\/:*?"<>|]/g, '_');
@@ -285,6 +285,67 @@ export default function RecordingDetailScreen() {
       console.error('Export error', err);
       Alert.alert('Errore', 'Impossibile esportare il file.');
     }
+  }
+
+  async function exportAudio() {
+    if (!recording?.serverId) {
+      Alert.alert('Audio non disponibile', 'La registrazione non è stata caricata sul cloud.');
+      return;
+    }
+    try {
+      const info = await getRecordingAudioInfo(recording.serverId);
+      if (!info.url) {
+        Alert.alert('Errore', 'Impossibile ottenere il file audio.');
+        return;
+      }
+      const sizeMb = info.size ? (info.size / (1024 * 1024)).toFixed(1) : '?';
+      Alert.alert(
+        'Scarica audio',
+        `Il file occupa ${sizeMb} MB. Procedo con il download?`,
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Scarica',
+            onPress: async () => {
+              try {
+                const safeTitle = (recording.title || 'registrazione').replace(/[\\/:*?"<>|]/g, '_');
+                const ext = info.contentType?.includes('mp4') ? 'm4a' : 'audio';
+                const path = `${FileSystem.cacheDirectory}${safeTitle}.${ext}`;
+                const dl = await FileSystem.downloadAsync(info.url, path);
+                await Share.share({ title: `${safeTitle}.${ext}`, url: dl.uri });
+              } catch (err) {
+                console.error('Audio download', err);
+                Alert.alert('Errore', 'Download fallito.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (err) {
+      console.error('Audio info error', err);
+      Alert.alert('Errore', 'Impossibile recuperare le info del file.');
+    }
+  }
+
+  async function exportFull() {
+    if (!recording) return;
+    const transcript = recording.transcriptEdited ?? recording.transcript ?? null;
+    const parts: string[] = [];
+    parts.push(`# ${recording.title}\n`);
+    parts.push(`Registrata: ${new Date(recording.recordedAt).toLocaleString('it-IT')}\n`);
+    if (recording.durationSeconds > 0) {
+      const m = Math.floor(recording.durationSeconds / 60);
+      const s = recording.durationSeconds % 60;
+      parts.push(`Durata: ${m}:${String(s).padStart(2, '0')}\n`);
+    }
+    parts.push('\n');
+    if (recording.summary) {
+      parts.push('## Riassunto\n\n' + recording.summary + '\n\n');
+    }
+    if (transcript) {
+      parts.push('## Trascrizione\n\n' + transcript + '\n');
+    }
+    await exportText(parts.join(''), 'full', 'md');
   }
 
   async function handleSummarize() {
@@ -637,8 +698,30 @@ export default function RecordingDetailScreen() {
             </View>
           )}
 
+          {(displayedTranscript || recording.summary) && (
+            <TouchableOpacity
+              style={[styles.secondaryButton, { marginTop: 24 }]}
+              onPress={exportFull}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="document-text-outline" size={17} color={Colors.accent} />
+              <Text style={styles.secondaryButtonText}>Esporta tutto (.md)</Text>
+            </TouchableOpacity>
+          )}
+
+          {recording.serverId && (
+            <TouchableOpacity
+              style={[styles.secondaryButton, { marginTop: 10 }]}
+              onPress={exportAudio}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="cloud-download-outline" size={17} color={Colors.accent} />
+              <Text style={styles.secondaryButtonText}>Scarica audio originale</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={styles.deleteButton}
+            style={[styles.deleteButton, { marginTop: 24 }]}
             onPress={handleDelete}
             activeOpacity={0.8}
           >
@@ -995,11 +1078,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
   },
   saveButtonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  secondaryButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, borderRadius: 13,
+    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
+  },
+  secondaryButtonText: { color: Colors.accent, fontSize: 16, fontWeight: '600' },
   deleteButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 14, borderRadius: 13,
     backgroundColor: Colors.card, borderWidth: 1, borderColor: '#FECACA',
-    marginTop: 24,
   },
   deleteButtonText: { color: '#DC2626', fontSize: 17, fontWeight: '600' },
 });

@@ -1,14 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, ActivityIndicator, RefreshControl,
+  SafeAreaView, ActivityIndicator, RefreshControl, Alert, Share,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../src/theme';
 import {
-  fetchUsageSummary, fetchElevenLabsUsage, fetchRailwayUsage,
+  fetchUsageSummary, fetchElevenLabsUsage, fetchRailwayUsage, getRecording,
 } from '../src/services/api';
+import { getAllRecordings } from '../src/stores/recordingStore';
 
 interface UsageSummary {
   recordings: { count: number };
@@ -71,6 +73,71 @@ export default function SettingsScreen() {
 
   useFocusEffect(useCallback(() => { loadAll(); }, [loadAll]));
 
+  const [exporting, setExporting] = useState(false);
+
+  async function exportAll() {
+    setExporting(true);
+    try {
+      const locals = await getAllRecordings();
+      const enriched = await Promise.all(
+        locals.map(async (r) => {
+          if (r.serverId) {
+            try {
+              const s = await getRecording(r.serverId);
+              return {
+                id: r.id,
+                serverId: r.serverId,
+                title: r.title,
+                recordedAt: r.recordedAt,
+                durationSeconds: r.durationSeconds,
+                source: r.source,
+                syncState: r.syncState,
+                status: r.status,
+                transcript: s.transcriptVerbatim ?? r.transcript ?? null,
+                transcriptEdited: s.transcriptEdited ?? r.transcriptEdited ?? null,
+                summary: s.summary ?? r.summary ?? null,
+              };
+            } catch {
+              // fall back to local
+            }
+          }
+          return {
+            id: r.id,
+            serverId: r.serverId ?? null,
+            title: r.title,
+            recordedAt: r.recordedAt,
+            durationSeconds: r.durationSeconds,
+            source: r.source,
+            syncState: r.syncState,
+            status: r.status,
+            transcript: r.transcript ?? null,
+            transcriptEdited: r.transcriptEdited ?? null,
+            summary: r.summary ?? null,
+          };
+        })
+      );
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: 1,
+        count: enriched.length,
+        recordings: enriched,
+      };
+      const d = new Date();
+      const ts = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+      const filename = `recy-backup-${ts}.json`;
+      const path = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(path, JSON.stringify(payload, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      await Share.share({ title: filename, url: path });
+    } catch (err) {
+      console.error('Backup error', err);
+      Alert.alert('Errore', 'Backup fallito.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
@@ -126,6 +193,27 @@ export default function SettingsScreen() {
             <ActivityIndicator color={Colors.secondary} />
           )}
         </Card>
+
+        <Text style={styles.sectionLabel}>Backup</Text>
+        <TouchableOpacity
+          style={[styles.card, styles.backupButton, exporting && { opacity: 0.6 }]}
+          onPress={exportAll}
+          disabled={exporting}
+          activeOpacity={0.8}
+        >
+          {exporting ? (
+            <ActivityIndicator color={Colors.accent} />
+          ) : (
+            <>
+              <Ionicons name="archive-outline" size={20} color={Colors.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.backupTitle}>Esporta tutte le registrazioni</Text>
+                <Text style={styles.backupSubtitle}>JSON con titoli, trascrizioni e riassunti</Text>
+              </View>
+              <Ionicons name="share-outline" size={20} color={Colors.accent} />
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -316,4 +404,9 @@ const styles = StyleSheet.create({
   breakdownLabel: { fontSize: 15, color: Colors.label, fontWeight: '500' },
   breakdownUnits: { fontSize: 12, color: Colors.tertiary, marginTop: 1 },
   breakdownCost: { fontSize: 15, color: Colors.label, fontVariant: ['tabular-nums'] },
+  backupButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+  },
+  backupTitle: { fontSize: 16, color: Colors.label, fontWeight: '600' },
+  backupSubtitle: { fontSize: 13, color: Colors.secondary, marginTop: 2 },
 });
