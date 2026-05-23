@@ -2,8 +2,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, FlatList, SectionList, TouchableOpacity, Alert,
   StyleSheet, SafeAreaView, TextInput, RefreshControl,
+  LayoutAnimation, UIManager, Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../src/theme';
@@ -111,6 +116,17 @@ export default function HomeScreen() {
   async function loadRecordings() {
     const all = await getAllRecordings();
     setRecordings(all);
+  }
+
+  async function swipeDelete(item: Recording) {
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      await deleteRecordingFully(item);
+      await loadRecordings();
+    } catch (err) {
+      Alert.alert('Errore', `Impossibile eliminare: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+    }
   }
 
   function toggleSelected(id: string) {
@@ -298,6 +314,7 @@ export default function HomeScreen() {
               onLongPress={() => {
                 if (!selectMode) toggleSelected(item.id);
               }}
+              onSwipeDelete={selectMode ? undefined : () => swipeDelete(item)}
               selected={selectMode ? selectedIds.has(item.id) : undefined}
             />
           )}
@@ -326,6 +343,7 @@ export default function HomeScreen() {
                 onLongPress={() => {
                   if (!selectMode) toggleSelected(item.id);
                 }}
+                onSwipeDelete={selectMode ? undefined : () => swipeDelete(item)}
                 selected={selectMode ? selectedIds.has(item.id) : undefined}
                 snippet={match?.field === 'transcript' ? match.snippet : undefined}
                 snippetQuery={match?.field === 'transcript' ? searchQuery.trim() : undefined}

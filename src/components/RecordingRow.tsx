@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, getSubjectColor, Fonts } from '../theme';
 import type { Recording, SyncState } from '../types';
@@ -39,6 +40,7 @@ interface Props {
   recording: Recording;
   onPress: () => void;
   onLongPress?: () => void;
+  onSwipeDelete?: () => void;
   isLast: boolean;
   snippet?: string;
   snippetQuery?: string;
@@ -64,11 +66,35 @@ function HighlightedSnippet({ text, query }: { text: string; query: string }) {
   );
 }
 
-export default function RecordingRow({ recording, onPress, onLongPress, isLast, snippet, snippetQuery, selected }: Props) {
+export default function RecordingRow({ recording, onPress, onLongPress, onSwipeDelete, isLast, snippet, snippetQuery, selected }: Props) {
+  const swipeRef = useRef<Swipeable>(null);
+  const renderRightActions = (progress: Animated.AnimatedInterpolation<number>) => {
+    const scale = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.6, 1],
+      extrapolate: 'clamp',
+    });
+    return (
+      <TouchableOpacity
+        style={styles.swipeDelete}
+        onPress={() => {
+          swipeRef.current?.close();
+          onSwipeDelete?.();
+        }}
+        activeOpacity={0.7}
+      >
+        <Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>
+          <Ionicons name="trash-outline" size={20} color={Colors.white} />
+          <Text style={styles.swipeDeleteLabel}>Elimina</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
   const subjectColor = getSubjectColor(recording.subject);
   const sync = SyncIcons[recording.syncState];
 
-  return (
+  const innerRow = (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
@@ -129,6 +155,22 @@ export default function RecordingRow({ recording, onPress, onLongPress, isLast, 
 
       <Ionicons name="chevron-forward" size={16} color={Colors.tertiary} />
     </TouchableOpacity>
+  );
+
+  if (!onSwipeDelete || selected !== undefined) {
+    return innerRow;
+  }
+
+  return (
+    <Swipeable
+      ref={swipeRef}
+      renderRightActions={renderRightActions}
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+    >
+      {innerRow}
+    </Swipeable>
   );
 }
 
@@ -197,6 +239,15 @@ const styles = StyleSheet.create({
   },
   selectCircleOn: {
     backgroundColor: Colors.accent, borderColor: Colors.accent,
+  },
+  swipeDelete: {
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 92,
+  },
+  swipeDeleteLabel: {
+    color: Colors.white, fontSize: 12, fontWeight: '600', marginTop: 3,
   },
   snippetMatch: {
     backgroundColor: '#FEF3C7',
