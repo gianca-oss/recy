@@ -146,17 +146,19 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push('/settings')}
-            activeOpacity={0.7}
+            activeOpacity={0.5}
+            hitSlop={6}
           >
-            <Ionicons name="stats-chart-outline" size={20} color={Colors.accent} />
+            <Ionicons name="stats-chart" size={22} color={Colors.accent} />
             {usageWarning && <View style={styles.warningDot} />}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push('/import')}
-            activeOpacity={0.7}
+            activeOpacity={0.5}
+            hitSlop={6}
           >
-            <Ionicons name="cloud-upload-outline" size={20} color={Colors.accent} />
+            <Ionicons name="add" size={32} color={Colors.accent} />
           </TouchableOpacity>
         </View>
       </View>
@@ -246,31 +248,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerActions: { flexDirection: 'row', gap: 8 },
+  headerActions: { flexDirection: 'row', gap: 4, marginRight: -8 },
   warningDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#DC2626',
-    borderWidth: 1.5,
-    borderColor: Colors.card,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: Colors.sep,
-    backgroundColor: Colors.card,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
   },
   headerTitle: {
     ...Fonts.title,
