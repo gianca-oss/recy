@@ -21,6 +21,8 @@ export interface Recording {
   status: RecordingStatus;
   syncState: SyncState;
   transcript?: string | null;
+  transcriptEdited?: string | null;
+  transcriptFetchedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

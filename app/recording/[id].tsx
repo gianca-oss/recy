@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Alert,
+  View, Text, TextInput, ScrollView, TouchableOpacity, Alert,
   StyleSheet, SafeAreaView, ActivityIndicator,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../../src/theme';
 import { getAllRecordings, updateRecording } from '../../src/stores/recordingStore';
-import { transcribeRecording } from '../../src/services/api';
+import { transcribeRecording, getRecording, updateRecording as updateRemoteRecording } from '../../src/services/api';
 import { deleteRecordingFully } from '../../src/services/deleteRecording';
 import type { Recording } from '../../src/types';
 
@@ -17,13 +18,45 @@ export default function RecordingDetailScreen() {
   const [recording, setRecording] = useState<Recording | null>(null);
   const [transcribing, setTranscribing] = useState(false);
 
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
+
+  const [editingTranscript, setEditingTranscript] = useState(false);
+  const [transcriptDraft, setTranscriptDraft] = useState('');
+  const [savingTranscript, setSavingTranscript] = useState(false);
+
   const load = useCallback(async () => {
     const all = await getAllRecordings();
     const found = all.find((r) => r.id === id);
     setRecording(found ?? null);
+    return found ?? null;
   }, [id]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  const syncFromServer = useCallback(async (rec: Recording | null) => {
+    if (!rec?.serverId) return;
+    try {
+      const server = await getRecording(rec.serverId);
+      const patch: Partial<Recording> = {
+        transcript: server.transcriptVerbatim ?? rec.transcript ?? null,
+        transcriptEdited: server.transcriptEdited ?? rec.transcriptEdited ?? null,
+        transcriptFetchedAt: new Date().toISOString(),
+      };
+      if (server.title && server.title !== rec.title) patch.title = server.title;
+      await updateRecording(rec.id, patch);
+      await load();
+    } catch (err) {
+      // offline / server error — keep local cache
+      console.log('Background server sync failed:', err);
+    }
+  }, [load]);
+
+  useFocusEffect(useCallback(() => {
+    (async () => {
+      const rec = await load();
+      syncFromServer(rec);
+    })();
+  }, [load, syncFromServer]));
 
   function handleDelete() {
     if (!recording) return;
@@ -60,6 +93,7 @@ export default function RecordingDetailScreen() {
         status: 'transcribed',
         syncState: 'transcribed',
         transcript: result.transcriptVerbatim,
+        transcriptFetchedAt: new Date().toISOString(),
       });
       await load();
     } catch (err) {
@@ -67,6 +101,57 @@ export default function RecordingDetailScreen() {
       Alert.alert('Errore', `Trascrizione fallita: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
     } finally {
       setTranscribing(false);
+    }
+  }
+
+  function startEditTitle() {
+    if (!recording) return;
+    setTitleDraft(recording.title);
+    setEditingTitle(true);
+  }
+
+  async function saveTitle() {
+    if (!recording) return;
+    const trimmed = titleDraft.trim();
+    if (!trimmed) {
+      Alert.alert('Titolo vuoto', 'Inserisci un titolo.');
+      return;
+    }
+    setSavingTitle(true);
+    try {
+      await updateRecording(recording.id, { title: trimmed });
+      if (recording.serverId) {
+        await updateRemoteRecording(recording.serverId, { title: trimmed }).catch(console.log);
+      }
+      await load();
+      setEditingTitle(false);
+    } catch (err) {
+      Alert.alert('Errore', 'Impossibile salvare il titolo.');
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
+  function startEditTranscript() {
+    if (!recording) return;
+    setTranscriptDraft(recording.transcriptEdited ?? recording.transcript ?? '');
+    setEditingTranscript(true);
+  }
+
+  async function saveTranscript() {
+    if (!recording) return;
+    setSavingTranscript(true);
+    try {
+      await updateRecording(recording.id, { transcriptEdited: transcriptDraft });
+      if (recording.serverId) {
+        await updateRemoteRecording(recording.serverId, { transcriptEdited: transcriptDraft }).catch(console.log);
+      }
+      await load();
+      setEditingTranscript(false);
+    } catch (err) {
+      Alert.alert('Errore', 'Impossibile salvare la trascrizione.');
+    } finally {
+      setSavingTranscript(false);
     }
   }
 
@@ -88,81 +173,151 @@ export default function RecordingDetailScreen() {
     );
   }
 
-  const canTranscribe = recording.syncState === 'uploaded' && !recording.transcript;
+  const displayedTranscript = recording.transcriptEdited ?? recording.transcript ?? null;
+  const canTranscribe = recording.syncState === 'uploaded' && !displayedTranscript;
+  const hasEdits = recording.transcriptEdited && recording.transcriptEdited !== recording.transcript;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={20} color={Colors.accent} />
-          <Text style={styles.backText}>Recy</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>{recording.title}</Text>
-        <Text style={styles.meta}>
-          {recording.subject ? `${recording.subject} · ` : ''}
-          {formatDuration(recording.durationSeconds)}
-        </Text>
-
-        <View style={styles.statusCard}>
-          <View style={styles.statusRow}>
-            <Ionicons
-              name={
-                recording.syncState === 'local_only' ? 'cloud-offline-outline' :
-                recording.syncState === 'uploaded' ? 'cloud-done-outline' :
-                'checkmark-circle'
-              }
-              size={18}
-              color={recording.syncState === 'local_only' ? '#F59E0B' : '#10B981'}
-            />
-            <Text style={styles.statusText}>
-              {recording.syncState === 'local_only' && 'Solo sul dispositivo'}
-              {recording.syncState === 'uploaded' && 'Caricata'}
-              {recording.syncState === 'transcribed' && 'Trascritta'}
-              {recording.syncState === 'summarized' && 'Con riassunto'}
-            </Text>
-          </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={20} color={Colors.accent} />
+            <Text style={styles.backText}>Recy</Text>
+          </TouchableOpacity>
         </View>
 
-        {canTranscribe && (
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {editingTitle ? (
+            <View style={styles.titleEditRow}>
+              <TextInput
+                style={styles.titleInput}
+                value={titleDraft}
+                onChangeText={setTitleDraft}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={saveTitle}
+              />
+              <TouchableOpacity onPress={() => setEditingTitle(false)} hitSlop={8}>
+                <Ionicons name="close" size={26} color={Colors.secondary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={saveTitle} hitSlop={8} disabled={savingTitle}>
+                {savingTitle
+                  ? <ActivityIndicator color={Colors.accent} />
+                  : <Ionicons name="checkmark" size={28} color={Colors.accent} />}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={startEditTitle} activeOpacity={0.6} style={styles.titleRow}>
+              <Text style={styles.title}>{recording.title}</Text>
+              <Ionicons name="pencil" size={18} color={Colors.secondary} />
+            </TouchableOpacity>
+          )}
+
+          <Text style={styles.meta}>{formatDuration(recording.durationSeconds)}</Text>
+
+          <View style={styles.statusCard}>
+            <View style={styles.statusRow}>
+              <Ionicons
+                name={
+                  recording.syncState === 'local_only' ? 'cloud-offline-outline' :
+                  recording.syncState === 'uploaded' ? 'cloud-done-outline' :
+                  'checkmark-circle'
+                }
+                size={18}
+                color={recording.syncState === 'local_only' ? '#F59E0B' : '#10B981'}
+              />
+              <Text style={styles.statusText}>
+                {recording.syncState === 'local_only' && 'Solo sul dispositivo'}
+                {recording.syncState === 'uploaded' && 'Caricata'}
+                {recording.syncState === 'transcribed' && 'Trascritta'}
+                {recording.syncState === 'summarized' && 'Con riassunto'}
+              </Text>
+            </View>
+          </View>
+
+          {canTranscribe && (
+            <TouchableOpacity
+              style={[styles.actionButton, transcribing && { opacity: 0.6 }]}
+              onPress={handleTranscribe}
+              disabled={transcribing}
+              activeOpacity={0.8}
+            >
+              {transcribing ? (
+                <>
+                  <ActivityIndicator color={Colors.white} size="small" />
+                  <Text style={styles.actionButtonText}>Trascrizione in corso…</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="document-text-outline" size={18} color={Colors.white} />
+                  <Text style={styles.actionButtonText}>Trascrivi</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {displayedTranscript !== null && (
+            <View style={styles.transcriptCard}>
+              <View style={styles.transcriptHeader}>
+                <Text style={styles.sectionLabel}>
+                  Trascrizione{hasEdits ? ' · modificata' : ''}
+                </Text>
+                {!editingTranscript && (
+                  <TouchableOpacity onPress={startEditTranscript} hitSlop={6}>
+                    <Ionicons name="pencil" size={18} color={Colors.accent} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {editingTranscript ? (
+                <>
+                  <TextInput
+                    style={styles.transcriptInput}
+                    value={transcriptDraft}
+                    onChangeText={setTranscriptDraft}
+                    multiline
+                    textAlignVertical="top"
+                    autoFocus
+                  />
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => setEditingTranscript(false)}
+                      disabled={savingTranscript}
+                    >
+                      <Text style={styles.cancelButtonText}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.saveButton, savingTranscript && { opacity: 0.6 }]}
+                      onPress={saveTranscript}
+                      disabled={savingTranscript}
+                    >
+                      {savingTranscript
+                        ? <ActivityIndicator color={Colors.white} size="small" />
+                        : <Text style={styles.saveButtonText}>Salva</Text>}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.transcriptText} selectable>{displayedTranscript}</Text>
+              )}
+            </View>
+          )}
+
           <TouchableOpacity
-            style={[styles.actionButton, transcribing && { opacity: 0.6 }]}
-            onPress={handleTranscribe}
-            disabled={transcribing}
+            style={styles.deleteButton}
+            onPress={handleDelete}
             activeOpacity={0.8}
           >
-            {transcribing ? (
-              <>
-                <ActivityIndicator color={Colors.white} size="small" />
-                <Text style={styles.actionButtonText}>Trascrizione in corso…</Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="document-text-outline" size={18} color={Colors.white} />
-                <Text style={styles.actionButtonText}>Trascrivi</Text>
-              </>
-            )}
+            <Ionicons name="trash-outline" size={17} color="#DC2626" />
+            <Text style={styles.deleteButtonText}>Elimina registrazione</Text>
           </TouchableOpacity>
-        )}
-
-        {recording.transcript && (
-          <View style={styles.transcriptCard}>
-            <Text style={styles.sectionLabel}>Trascrizione</Text>
-            <Text style={styles.transcriptText}>{recording.transcript}</Text>
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDelete}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="trash-outline" size={17} color="#DC2626" />
-          <Text style={styles.deleteButtonText}>Elimina registrazione</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -174,13 +329,17 @@ const styles = StyleSheet.create({
   topBar: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 8 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   backText: { fontSize: 18, color: Colors.accent },
-  scroll: { padding: 18 },
-  title: { ...Fonts.title, color: Colors.label, marginBottom: 6 },
-  meta: { fontSize: 16, color: Colors.secondary, marginBottom: 18 },
-  statusCard: {
-    backgroundColor: Colors.card, borderRadius: 13, padding: 13,
-    marginBottom: 16,
+  scroll: { padding: 18, paddingBottom: 60 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  title: { ...Fonts.title, color: Colors.label, flex: 1 },
+  titleEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  titleInput: {
+    ...Fonts.title, color: Colors.label, flex: 1,
+    backgroundColor: Colors.card, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: Colors.sep,
   },
+  meta: { fontSize: 16, color: Colors.secondary, marginBottom: 18 },
+  statusCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 13, marginBottom: 16 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusText: { fontSize: 16, color: Colors.label, fontWeight: '500' },
   actionButton: {
@@ -189,14 +348,33 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   actionButtonText: { color: Colors.white, fontSize: 18, fontWeight: '600' },
-  transcriptCard: {
-    backgroundColor: Colors.card, borderRadius: 13, padding: 14,
+  transcriptCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 14 },
+  transcriptHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 8,
   },
   sectionLabel: {
     fontSize: 14, color: Colors.secondary, textTransform: 'uppercase',
-    letterSpacing: 0.3, fontWeight: '500', marginBottom: 8,
+    letterSpacing: 0.3, fontWeight: '500',
   },
-  transcriptText: { fontSize: 17, color: Colors.label, lineHeight: 22 },
+  transcriptText: { fontSize: 17, color: Colors.label, lineHeight: 24 },
+  transcriptInput: {
+    fontSize: 17, color: Colors.label, lineHeight: 24,
+    minHeight: 200, padding: 0, paddingTop: 0,
+  },
+  editActions: {
+    flexDirection: 'row', gap: 10, marginTop: 14,
+  },
+  cancelButton: {
+    flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center',
+    backgroundColor: Colors.bg, borderWidth: 1, borderColor: Colors.sep,
+  },
+  cancelButtonText: { color: Colors.label, fontSize: 16, fontWeight: '500' },
+  saveButton: {
+    flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center',
+    backgroundColor: Colors.accent,
+  },
+  saveButtonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
   deleteButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 14, borderRadius: 13,
