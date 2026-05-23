@@ -8,7 +8,16 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { Colors, Fonts } from '../../src/theme';
+
+async function haptic(type: Haptics.NotificationFeedbackType | 'light' | 'selection') {
+  try {
+    if (type === 'light') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    else if (type === 'selection') await Haptics.selectionAsync();
+    else await Haptics.notificationAsync(type);
+  } catch {}
+}
 import { getAllRecordings, updateRecording } from '../../src/stores/recordingStore';
 import { transcribeRecording, summarizeRecording, getRecording, getRecordingAudioInfo, updateRecording as updateRemoteRecording } from '../../src/services/api';
 import { deleteRecordingFully } from '../../src/services/deleteRecording';
@@ -213,6 +222,7 @@ export default function RecordingDetailScreen() {
   }
 
   async function togglePlayPause() {
+    haptic('light');
     const sound = await ensureAudioLoaded();
     if (!sound) return;
     if (isPlaying) {
@@ -223,11 +233,30 @@ export default function RecordingDetailScreen() {
   }
 
   async function seekToSeconds(seconds: number, andPlay = true) {
+    haptic('selection');
     const sound = await ensureAudioLoaded();
     if (!sound) return;
     await sound.setPositionAsync(Math.floor(seconds * 1000));
     if (andPlay) await sound.playAsync();
   }
+
+  // Notify when transcription or summarization completes
+  const prevStatusRef = useRef<string | undefined>(undefined);
+  const prevSummaryRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!recording) return;
+    if (prevStatusRef.current === 'transcribing' && recording.status === 'transcribed') {
+      haptic(Haptics.NotificationFeedbackType.Success);
+    }
+    if (prevStatusRef.current === 'transcribing' && recording.status === 'failed') {
+      haptic(Haptics.NotificationFeedbackType.Error);
+    }
+    if (prevSummaryRef.current === null && recording.summary) {
+      haptic(Haptics.NotificationFeedbackType.Success);
+    }
+    prevStatusRef.current = recording.status;
+    prevSummaryRef.current = recording.summary ?? null;
+  }, [recording?.status, recording?.summary]);
 
   // Track current word during playback
   useEffect(() => {

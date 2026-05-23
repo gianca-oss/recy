@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Alert,
-  StyleSheet, SafeAreaView, TextInput,
+  StyleSheet, SafeAreaView, TextInput, RefreshControl,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../src/theme';
@@ -24,7 +25,18 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [usageWarning, setUsageWarning] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
   const selectMode = selectedIds.size > 0;
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await reconcileServerIds().catch(() => 0);
+      await loadRecordings();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -102,6 +114,7 @@ export default function HomeScreen() {
   }
 
   function toggleSelected(id: string) {
+    Haptics.selectionAsync().catch(() => {});
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -247,13 +260,17 @@ export default function HomeScreen() {
 
       {filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="mic-outline" size={48} color={Colors.tertiary} />
+          <Ionicons
+            name={searchQuery ? 'search-outline' : 'mic-outline'}
+            size={48}
+            color={Colors.tertiary}
+          />
           <Text style={styles.emptyTitle}>
             {searchQuery ? 'Nessun risultato' : 'Nessuna registrazione'}
           </Text>
           <Text style={styles.emptySubtitle}>
             {searchQuery
-              ? 'Prova con un altro termine'
+              ? `Nessuna registrazione contiene "${searchQuery.trim()}"`
               : 'Premi il pulsante in basso\nper iniziare a registrare'}
           </Text>
         </View>
@@ -262,6 +279,9 @@ export default function HomeScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
           renderItem={({ item, index }) => {
             const match = searchResults.find((m) => m.recording.id === item.id);
             const target = match && match.field === 'transcript'
