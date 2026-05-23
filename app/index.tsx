@@ -219,7 +219,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.recordButton}
-          onPress={() => router.push('/record')}
+          onPress={() => router.push('/record?autostart=true')}
         >
           <Ionicons name="mic" size={18} color={Colors.white} />
           <Text style={styles.recordButtonText}>Nuova registrazione</Text>

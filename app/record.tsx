@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, Alert, StyleSheet,
   SafeAreaView, AppState,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Battery from 'expo-battery';
@@ -35,8 +35,10 @@ type RecState = 'idle' | 'recording' | 'paused';
 
 export default function RecordScreen() {
   const router = useRouter();
+  const { autostart } = useLocalSearchParams<{ autostart?: string }>();
 
   const [recState, setRecState] = useState<RecState>('idle');
+  const autostartedRef = useRef(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [session, setSession] = useState<RecordingSessionState>(createNewSession());
   const [showStopConfirm, setShowStopConfirm] = useState(false);
@@ -112,6 +114,13 @@ export default function RecordScreen() {
   }
 
   useEffect(() => () => { stopTimer(); stopMeteringPolling(); }, []);
+
+  useEffect(() => {
+    if (autostart === 'true' && !autostartedRef.current && recState === 'idle') {
+      autostartedRef.current = true;
+      handleStart();
+    }
+  }, [autostart, recState]);
 
   async function handleStart() {
     const { granted } = await Audio.requestPermissionsAsync();
