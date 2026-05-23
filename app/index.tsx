@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingBottom: 34,
+    paddingBottom: 56,
     paddingTop: 22,
     alignItems: 'center',
   },
