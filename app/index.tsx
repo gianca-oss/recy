@@ -217,12 +217,12 @@ export default function HomeScreen() {
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.75}
           style={styles.recordButton}
           onPress={() => router.push('/record?autostart=true')}
+          hitSlop={10}
         >
-          <Ionicons name="mic" size={18} color={Colors.white} />
-          <Text style={styles.recordButtonText}>Nuova registrazione</Text>
+          <View style={styles.recordButtonInner} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -326,27 +326,29 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 18,
     paddingBottom: 34,
     paddingTop: 22,
+    alignItems: 'center',
   },
   recordButton: {
-    backgroundColor: Colors.accent,
-    flexDirection: 'row',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 4,
+    borderColor: Colors.card,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 13,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 6,
   },
-  recordButtonText: {
-    color: Colors.white,
-    fontSize: 20,
-    fontWeight: '600',
+  recordButtonInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.red,
   },
 });
