@@ -10,6 +10,7 @@ import { getAllRecordings } from '../src/stores/recordingStore';
 import { loadDanglingSession, clearSession } from '../src/stores/recordingSession';
 import { processQueue, subscribeToUploadQueue } from '../src/services/uploadQueue';
 import { deleteRecordingFully } from '../src/services/deleteRecording';
+import { reconcileServerIds } from '../src/services/syncWithServer';
 import RecordingRow from '../src/components/RecordingRow';
 import type { Recording } from '../src/types';
 
@@ -23,6 +24,9 @@ export default function HomeScreen() {
       loadRecordings();
       checkDanglingSession();
       processQueue().catch(console.log);
+      reconcileServerIds()
+        .then((n) => { if (n > 0) loadRecordings(); })
+        .catch(console.log);
     }, [])
   );
 
