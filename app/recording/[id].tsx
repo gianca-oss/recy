@@ -4,6 +4,7 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator,
   KeyboardAvoidingView, Platform, Share,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../../src/theme';
@@ -88,16 +89,23 @@ export default function RecordingDetailScreen() {
     );
   }
 
-  async function exportText(content: string, suffix: string) {
+  async function exportText(content: string, suffix: 'raw' | 'summary', ext: 'txt' | 'md') {
     if (!recording) return;
-    const filename = `${recording.title}-${suffix}`;
+    const safeTitle = (recording.title || 'registrazione')
+      .replace(/[\\/:*?"<>|]/g, '_');
+    const filename = `${safeTitle}-${suffix}.${ext}`;
     try {
+      const path = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(path, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
       await Share.share({
         title: filename,
-        message: content,
+        url: path,
       });
     } catch (err) {
-      console.error('Share error', err);
+      console.error('Export error', err);
+      Alert.alert('Errore', 'Impossibile esportare il file.');
     }
   }
 
@@ -334,7 +342,7 @@ export default function RecordingDetailScreen() {
                 </Text>
                 {!editingTranscript && (
                   <TouchableOpacity
-                    onPress={() => exportText(displayedTranscript, 'trascrizione.txt')}
+                    onPress={() => exportText(displayedTranscript, 'raw', 'txt')}
                     hitSlop={8}
                   >
                     <Ionicons name="share-outline" size={20} color={Colors.accent} />
@@ -417,7 +425,7 @@ export default function RecordingDetailScreen() {
               <View style={styles.cardHeader}>
                 <Text style={styles.sectionLabel}>Riassunto</Text>
                 <TouchableOpacity
-                  onPress={() => exportText(recording.summary!, 'riassunto.md')}
+                  onPress={() => exportText(recording.summary!, 'summary', 'md')}
                   hitSlop={8}
                 >
                   <Ionicons name="share-outline" size={20} color={Colors.accent} />
