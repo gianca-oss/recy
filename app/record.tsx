@@ -294,7 +294,7 @@ export default function RecordScreen() {
       <View style={styles.topBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={20} color={Colors.accent} />
-          <Text style={styles.backText}>Lezioni</Text>
+          <Text style={styles.backText}>Recy</Text>
         </TouchableOpacity>
 
         {recState !== 'idle' && (
@@ -325,7 +325,7 @@ export default function RecordScreen() {
             </View>
             <Text style={styles.idleTitle}>Pronta per registrare</Text>
             <Text style={styles.idleSubtitle}>
-              Premi il pulsante per iniziare{'\n'}la registrazione della lezione
+              Premi il pulsante per iniziare{'\n'}la registrazione
             </Text>
           </View>
         ) : (

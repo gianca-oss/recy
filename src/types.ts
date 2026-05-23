@@ -4,20 +4,20 @@ export interface Bookmark {
   createdAt: string;
 }
 
-export type LessonSource = 'recording' | 'import';
-export type LessonStatus = 'recorded' | 'transcribing' | 'transcribed' | 'failed';
+export type RecordingSource = 'recording' | 'import';
+export type RecordingStatus = 'recorded' | 'transcribing' | 'transcribed' | 'failed';
 export type SyncState = 'local_only' | 'uploaded' | 'transcribed' | 'summarized';
 
-export interface Lesson {
+export interface Recording {
   id: string;
   title: string;
   subject: string | null;
   recordedAt: string;
   durationSeconds: number;
   audioUri: string;
-  source: LessonSource;
+  source: RecordingSource;
   bookmarks: Bookmark[];
-  status: LessonStatus;
+  status: RecordingStatus;
   syncState: SyncState;
   createdAt: string;
   updatedAt: string;

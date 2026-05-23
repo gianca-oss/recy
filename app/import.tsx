@@ -7,9 +7,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { Colors, Fonts } from '../src/theme';
-import { saveLesson } from '../src/stores/lessonStore';
+import { saveRecording } from '../src/stores/recordingStore';
 import { enqueueUpload } from '../src/services/uploadQueue';
-import type { Lesson } from '../src/types';
+import type { Recording } from '../src/types';
 
 const ACCEPTED_TYPES = [
   'audio/mp4', 'audio/x-m4a', 'audio/mpeg', 'audio/wav', 'audio/x-wav',
@@ -45,7 +45,7 @@ export default function ImportScreen() {
 
       const asset = result.assets[0];
 
-      const MAX_SIZE = 3 * 1024 * 1024 * 1024; // 3 GB (Scribe limit)
+      const MAX_SIZE = 3 * 1024 * 1024 * 1024;
       if (asset.size && asset.size > MAX_SIZE) {
         Alert.alert('File troppo grande', 'Il limite massimo è 3 GB.');
         return;
@@ -74,8 +74,8 @@ export default function ImportScreen() {
       const finalSubject = subject === '__custom__' ? customSubject.trim() || null : subject;
       const now = new Date().toISOString();
 
-      const lesson: Lesson = {
-        id: `lesson_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      const recording: Recording = {
+        id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         title: title.trim() || file.name,
         subject: finalSubject,
         recordedAt: now,
@@ -89,8 +89,8 @@ export default function ImportScreen() {
         updatedAt: now,
       };
 
-      await saveLesson(lesson);
-      enqueueUpload(lesson).catch(console.log);
+      await saveRecording(recording);
+      enqueueUpload(recording).catch(console.log);
 
       router.replace('/');
     } catch (err) {
@@ -115,7 +115,7 @@ export default function ImportScreen() {
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={20} color={Colors.accent} />
-            <Text style={styles.backText}>Lezioni</Text>
+            <Text style={styles.backText}>Recy</Text>
           </TouchableOpacity>
         </View>
 
@@ -125,7 +125,7 @@ export default function ImportScreen() {
         >
           <Text style={styles.title}>Importa</Text>
           <Text style={styles.subtitle}>
-            Aggiungi un file audio o video già registrato.{'\n'}Verrà trascritto come una normale lezione.
+            Aggiungi un file audio o video già registrato.{'\n'}Verrà trascritto come una normale registrazione.
           </Text>
 
           {!file ? (
@@ -156,7 +156,6 @@ export default function ImportScreen() {
             </>
           ) : (
             <>
-              {/* File selected */}
               <View style={styles.fileCard}>
                 <View style={styles.fileIconCircle}>
                   <Ionicons name="document-outline" size={19} color={Colors.label} />
@@ -170,20 +169,18 @@ export default function ImportScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Title */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Titolo</Text>
                 <TextInput
                   style={styles.textInput}
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="Nome della lezione"
+                  placeholder="Nome della registrazione"
                   placeholderTextColor={Colors.tertiary}
                   returnKeyType="done"
                 />
               </View>
 
-              {/* Subject */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Materia</Text>
                 <View style={styles.subjectGrid}>
@@ -227,7 +224,6 @@ export default function ImportScreen() {
                 )}
               </View>
 
-              {/* Import button */}
               <TouchableOpacity
                 style={[styles.importButton, saving && { opacity: 0.6 }]}
                 onPress={handleImport}
@@ -248,154 +244,44 @@ export default function ImportScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  topBar: {
-    paddingHorizontal: 14,
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 1,
-  },
+  topBar: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 8 },
+  backButton: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   backText: { fontSize: 16, color: Colors.accent },
-  scroll: {
-    padding: 18,
-  },
-  title: {
-    ...Fonts.title,
-    color: Colors.label,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14.5,
-    color: Colors.secondary,
-    lineHeight: 20,
-    marginBottom: 18,
-  },
+  scroll: { padding: 18 },
+  title: { ...Fonts.title, color: Colors.label, marginBottom: 4 },
+  subtitle: { fontSize: 14.5, color: Colors.secondary, lineHeight: 20, marginBottom: 18 },
   pickButton: {
-    width: '100%',
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: Colors.tertiary,
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    paddingVertical: 30,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    gap: 10,
+    width: '100%', borderWidth: 1.5, borderStyle: 'dashed', borderColor: Colors.tertiary,
+    backgroundColor: Colors.card, borderRadius: 14, paddingVertical: 30, paddingHorizontal: 16, alignItems: 'center', gap: 10,
   },
-  pickIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: Colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  pickIconCircle: { width: 52, height: 52, borderRadius: 14, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' },
   pickTitle: { fontSize: 16, fontWeight: '600', color: Colors.label },
   pickSubtitle: { fontSize: 13, color: Colors.secondary },
   sectionLabel: {
-    fontSize: 12,
-    color: Colors.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    fontWeight: '500',
-    marginTop: 22,
-    marginBottom: 8,
-    paddingLeft: 6,
+    fontSize: 12, color: Colors.secondary, textTransform: 'uppercase', letterSpacing: 0.3,
+    fontWeight: '500', marginTop: 22, marginBottom: 8, paddingLeft: 6,
   },
-  hintCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 13,
-    padding: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-  },
-  hintText: {
-    fontSize: 14,
-    color: Colors.secondary,
-    lineHeight: 19,
-    flex: 1,
-  },
-  formatsText: {
-    fontSize: 12,
-    color: Colors.tertiary,
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  fileCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 13,
-    padding: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    marginBottom: 18,
-  },
-  fileIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: Colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  hintCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  hintText: { fontSize: 14, color: Colors.secondary, lineHeight: 19, flex: 1 },
+  formatsText: { fontSize: 12, color: Colors.tertiary, textAlign: 'center', marginTop: 16 },
+  fileCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 18 },
+  fileIconCircle: { width: 40, height: 40, borderRadius: 10, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' },
   fileName: { fontSize: 15, fontWeight: '600', color: Colors.label },
   fileMeta: { fontSize: 13, color: Colors.secondary, marginTop: 2 },
   fieldContainer: { marginBottom: 20 },
-  fieldLabel: {
-    fontSize: 12.5,
-    color: Colors.secondary,
-    fontWeight: '500',
-    marginBottom: 6,
-    paddingLeft: 2,
-  },
+  fieldLabel: { fontSize: 12.5, color: Colors.secondary, fontWeight: '500', marginBottom: 6, paddingLeft: 2 },
   textInput: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.sep,
-    borderRadius: 11,
-    paddingHorizontal: 13,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: Colors.label,
+    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
+    borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontSize: 16, color: Colors.label,
   },
-  subjectGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 9,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.sep,
-  },
-  chipActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
+  subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 9, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep },
+  chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { fontSize: 14, fontWeight: '500', color: Colors.label },
   chipTextActive: { color: Colors.white },
   importButton: {
-    backgroundColor: Colors.accent,
-    paddingVertical: 14,
-    borderRadius: 13,
-    alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: 13, alignItems: 'center', marginTop: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
   },
-  importButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  importButtonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
 });

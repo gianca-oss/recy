@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Lezioni",
-    "slug": "LessonRecorder",
+    "name": "Recy",
+    "slug": "recy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "lessonrecorder",
+    "scheme": "recy",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lessonrecorder.app",
+      "bundleIdentifier": "com.recy.app",
       "infoPlist": {
         "UIBackgroundModes": ["audio"],
         "NSMicrophoneUsageDescription": "L'app ha bisogno del microfono per registrare le lezioni."

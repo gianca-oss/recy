@@ -6,28 +6,28 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../src/theme';
-import { getAllLessons } from '../src/stores/lessonStore';
+import { getAllRecordings } from '../src/stores/recordingStore';
 import { loadDanglingSession, clearSession } from '../src/stores/recordingSession';
 import { processQueue } from '../src/services/uploadQueue';
-import LessonRow from '../src/components/LessonRow';
-import type { Lesson } from '../src/types';
+import RecordingRow from '../src/components/RecordingRow';
+import type { Recording } from '../src/types';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   useFocusEffect(
     useCallback(() => {
-      loadLessons();
+      loadRecordings();
       checkDanglingSession();
       processQueue().catch(console.log);
     }, [])
   );
 
-  async function loadLessons() {
-    const all = await getAllLessons();
-    setLessons(all);
+  async function loadRecordings() {
+    const all = await getAllRecordings();
+    setRecordings(all);
   }
 
   async function checkDanglingSession() {
@@ -64,17 +64,17 @@ export default function HomeScreen() {
   }
 
   const filtered = searchQuery.trim()
-    ? lessons.filter(
-        (l) =>
-          l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (l.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+    ? recordings.filter(
+        (r) =>
+          r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (r.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
       )
-    : lessons;
+    : recordings;
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lezioni</Text>
+        <Text style={styles.headerTitle}>Recy</Text>
         <TouchableOpacity
           style={styles.importButton}
           onPress={() => router.push('/import')}
@@ -107,7 +107,7 @@ export default function HomeScreen() {
         <View style={styles.empty}>
           <Ionicons name="mic-outline" size={48} color={Colors.tertiary} />
           <Text style={styles.emptyTitle}>
-            {searchQuery ? 'Nessun risultato' : 'Nessuna lezione'}
+            {searchQuery ? 'Nessun risultato' : 'Nessuna registrazione'}
           </Text>
           <Text style={styles.emptySubtitle}>
             {searchQuery
@@ -121,12 +121,10 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item, index }) => (
-            <LessonRow
-              lesson={item}
+            <RecordingRow
+              recording={item}
               isLast={index === filtered.length - 1}
-              onPress={() => {
-                // Dettaglio lezione — sarà implementato nelle tappe successive
-              }}
+              onPress={() => {}}
             />
           )}
           ListHeaderComponent={

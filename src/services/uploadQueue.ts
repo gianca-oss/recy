@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
-import { getPresignedUploadUrl, createLesson, updateLesson } from './api';
-import { updateLesson as updateLocalLesson, getAllLessons } from '../stores/lessonStore';
-import type { Lesson } from '../types';
+import { getPresignedUploadUrl, createRecording } from './api';
+import { updateRecording as updateLocalRecording, getAllRecordings } from '../stores/recordingStore';
+import type { Recording } from '../types';
 import { AppState } from 'react-native';
 
 const QUEUE_KEY = '@upload_queue';
@@ -10,7 +10,7 @@ const MAX_RETRIES = 10;
 const BACKOFF_BASE = 2000;
 
 interface QueueItem {
-  lessonId: string;
+  recordingId: string;
   audioUri: string;
   retries: number;
   lastAttempt: string | null;
@@ -18,14 +18,14 @@ interface QueueItem {
 
 let processing = false;
 
-export async function enqueueUpload(lesson: Lesson): Promise<void> {
+export async function enqueueUpload(recording: Recording): Promise<void> {
   const queue = await getQueue();
-  const exists = queue.find((q) => q.lessonId === lesson.id);
+  const exists = queue.find((q) => q.recordingId === recording.id);
   if (exists) return;
 
   queue.push({
-    lessonId: lesson.id,
-    audioUri: lesson.audioUri,
+    recordingId: recording.id,
+    audioUri: recording.audioUri,
     retries: 0,
     lastAttempt: null,
   });
@@ -43,14 +43,14 @@ export async function processQueue(): Promise<void> {
 
     for (const item of queue) {
       if (item.retries >= MAX_RETRIES) {
-        await updateLocalLesson(item.lessonId, { syncState: 'local_only' });
+        await updateLocalRecording(item.recordingId, { syncState: 'local_only' });
         continue;
       }
 
       try {
         await processItem(item);
       } catch (err) {
-        console.log(`Upload failed for ${item.lessonId}, retry ${item.retries + 1}:`, err);
+        console.log(`Upload failed for ${item.recordingId}, retry ${item.retries + 1}:`, err);
         remaining.push({
           ...item,
           retries: item.retries + 1,
@@ -88,11 +88,11 @@ async function processItem(item: QueueItem): Promise<void> {
     throw new Error(`S3 upload failed: ${uploadResult.status}`);
   }
 
-  const lessons = await getAllLessons();
-  const local = lessons.find((l) => l.id === item.lessonId);
+  const recordings = await getAllRecordings();
+  const local = recordings.find((r) => r.id === item.recordingId);
   if (!local) return;
 
-  const serverLesson = await createLesson({
+  await createRecording({
     title: local.title,
     subject: local.subject,
     recordedAt: local.recordedAt,
@@ -103,7 +103,7 @@ async function processItem(item: QueueItem): Promise<void> {
     status: 'recorded',
   });
 
-  await updateLocalLesson(item.lessonId, {
+  await updateLocalRecording(item.recordingId, {
     syncState: 'uploaded',
   });
 }
@@ -117,7 +117,6 @@ async function saveQueue(queue: QueueItem[]): Promise<void> {
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
-// Auto-process queue when app comes to foreground
 AppState.addEventListener('change', (state) => {
   if (state === 'active') processQueue();
 });

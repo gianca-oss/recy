@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL_KEY = '@api_base_url';
-const DEFAULT_API_URL = 'http://localhost:3000';
+const DEFAULT_API_URL = 'https://recy.up.railway.app';
 
 let cachedBaseUrl: string | null = null;
 
@@ -38,7 +38,7 @@ export async function getPresignedUploadUrl(filename: string, contentType: strin
   return res.json() as Promise<{ url: string; key: string }>;
 }
 
-export async function createLesson(data: {
+export async function createRecording(data: {
   title: string;
   subject: string | null;
   recordedAt: string;
@@ -48,31 +48,31 @@ export async function createLesson(data: {
   bookmarks: unknown[];
   status?: string;
 }) {
-  const res = await apiFetch('/api/lessons', {
+  const res = await apiFetch('/api/recordings', {
     method: 'POST',
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Create lesson failed: ${res.status}`);
+  if (!res.ok) throw new Error(`Create recording failed: ${res.status}`);
   return res.json();
 }
 
-export async function fetchLessons() {
-  const res = await apiFetch('/api/lessons');
-  if (!res.ok) throw new Error(`Fetch lessons failed: ${res.status}`);
+export async function fetchRecordings() {
+  const res = await apiFetch('/api/recordings');
+  if (!res.ok) throw new Error(`Fetch recordings failed: ${res.status}`);
   return res.json();
 }
 
-export async function updateLesson(id: string, data: Record<string, unknown>) {
-  const res = await apiFetch(`/api/lessons/${id}`, {
+export async function updateRecording(id: string, data: Record<string, unknown>) {
+  const res = await apiFetch(`/api/recordings/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Update lesson failed: ${res.status}`);
+  if (!res.ok) throw new Error(`Update recording failed: ${res.status}`);
   return res.json();
 }
 
-export async function deleteLesson(id: string) {
-  const res = await apiFetch(`/api/lessons/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`Delete lesson failed: ${res.status}`);
+export async function deleteRecording(id: string) {
+  const res = await apiFetch(`/api/recordings/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Delete recording failed: ${res.status}`);
   return res.json();
 }

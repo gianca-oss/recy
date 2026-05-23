@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-enum LessonStatus {
+enum RecordingStatus {
   recorded
   transcribing
   transcribed
@@ -21,30 +21,30 @@ enum SyncState {
   summarized
 }
 
-enum LessonSource {
+enum RecordingSource {
   recording
   import
 }
 
-model Lesson {
-  id                 String       @id @default(cuid())
+model Recording {
+  id                 String          @id @default(cuid())
   userId             String?
   title              String
   subject            String?
   recordedAt         DateTime
-  source             LessonSource @default(recording)
+  source             RecordingSource @default(recording)
   durationSeconds    Int
   audioUrl           String?
-  status             LessonStatus @default(recorded)
-  syncState          SyncState    @default(uploaded)
-  bookmarks          Json         @default("[]")
-  transcriptVerbatim String?      @db.Text
-  transcriptClean    String?      @db.Text
-  transcriptEdited   String?      @db.Text
+  status             RecordingStatus @default(recorded)
+  syncState          SyncState       @default(uploaded)
+  bookmarks          Json            @default("[]")
+  transcriptVerbatim String?         @db.Text
+  transcriptClean    String?         @db.Text
+  transcriptEdited   String?         @db.Text
   transcriptSegments Json?
-  summary            String?      @db.Text
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  summary            String?         @db.Text
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   @@index([userId])
   @@index([recordedAt])

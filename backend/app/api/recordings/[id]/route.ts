@@ -7,16 +7,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const lesson = await prisma.lesson.findUnique({ where: { id } });
+    const recording = await prisma.recording.findUnique({ where: { id } });
 
-    if (!lesson) {
-      return Response.json({ error: "Lesson not found" }, { status: 404 });
+    if (!recording) {
+      return Response.json({ error: "Recording not found" }, { status: 404 });
     }
 
-    return Response.json(lesson);
+    return Response.json(recording);
   } catch (err) {
-    console.error("GET /api/lessons/[id] error:", err);
-    return Response.json({ error: "Failed to fetch lesson" }, { status: 500 });
+    console.error("GET /api/recordings/[id] error:", err);
+    return Response.json({ error: "Failed to fetch recording" }, { status: 500 });
   }
 }
 
@@ -38,15 +38,15 @@ export async function PATCH(
       if (key in body) data[key] = body[key];
     }
 
-    const lesson = await prisma.lesson.update({
+    const recording = await prisma.recording.update({
       where: { id },
       data,
     });
 
-    return Response.json(lesson);
+    return Response.json(recording);
   } catch (err) {
-    console.error("PATCH /api/lessons/[id] error:", err);
-    return Response.json({ error: "Failed to update lesson" }, { status: 500 });
+    console.error("PATCH /api/recordings/[id] error:", err);
+    return Response.json({ error: "Failed to update recording" }, { status: 500 });
   }
 }
 
@@ -56,10 +56,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.lesson.delete({ where: { id } });
+    await prisma.recording.delete({ where: { id } });
     return Response.json({ success: true });
   } catch (err) {
-    console.error("DELETE /api/lessons/[id] error:", err);
-    return Response.json({ error: "Failed to delete lesson" }, { status: 500 });
+    console.error("DELETE /api/recordings/[id] error:", err);
+    return Response.json({ error: "Failed to delete recording" }, { status: 500 });
   }
 }
