@@ -19,10 +19,12 @@ export async function setApiBaseUrl(url: string): Promise<void> {
 
 async function apiFetch(path: string, options?: RequestInit) {
   const base = await getApiBaseUrl();
+  const apiKey = process.env.EXPO_PUBLIC_API_KEY;
   const res = await fetch(`${base}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(apiKey ? { 'x-api-key': apiKey } : {}),
       ...options?.headers,
     },
   });
