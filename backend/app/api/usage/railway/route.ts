@@ -16,11 +16,28 @@ export async function GET() {
     return Response.json({ error: "RAILWAY_PROJECT_ID not set" }, { status: 503 });
   }
 
+  // Resolve workspaceId from the token first.
+  const tokenQuery = `{ apiToken { workspaces { id } } }`;
+  const tokenRes = await fetch(RAILWAY_GRAPHQL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ query: tokenQuery }),
+  });
+  const tokenJson = await tokenRes.json();
+  const workspaceId: string | undefined =
+    tokenJson?.data?.apiToken?.workspaces?.[0]?.id;
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Could not resolve workspaceId from token" },
+      { status: 502 }
+    );
+  }
+
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const query = `
-    query Usage($projectId: String!, $startDate: DateTime!, $endDate: DateTime!) {
+    query Usage($projectId: String!, $workspaceId: String!, $startDate: DateTime!, $endDate: DateTime!) {
       usage(
         projectId: $projectId
         startDate: $startDate
@@ -30,20 +47,34 @@ export async function GET() {
         measurement
         value
       }
+      workspace(id: $workspaceId) {
+        plan
+        customer {
+          currentUsage
+          creditBalance
+          remainingUsageCreditBalance
+          appliedCredits
+          hasExhaustedFreePlan
+          isTrialing
+          trialDaysRemaining
+          billingPeriod {
+            start
+            end
+          }
+        }
+      }
     }
   `;
 
   try {
     const res = await fetch(RAILWAY_GRAPHQL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         query,
         variables: {
           projectId,
+          workspaceId,
           startDate: startOfMonth.toISOString(),
           endDate: now.toISOString(),
         },
@@ -67,36 +98,24 @@ export async function GET() {
     const map: Record<string, number> = {};
     for (const m of metrics) map[m.measurement] = m.value;
 
-    // Railway pricing (Hobby/Pro, as of 2025):
-    // CPU $0.027/vCPU-hour, RAM $0.0139/GB-hour,
-    // Egress $0.05/GB, Disk $0.15/GB/mo prorated
-    const cpu = map.CPU_USAGE ?? 0;
-    const mem = map.MEMORY_USAGE_GB ?? 0;
-    const egress = map.NETWORK_TX_GB ?? 0;
-    const disk = map.DISK_USAGE_GB ?? 0;
-
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const elapsedDays = (now.getTime() - startOfMonth.getTime()) / (1000 * 60 * 60 * 24);
-    const diskCost = disk * 0.15 * (elapsedDays / daysInMonth);
-
-    const estimatedCost =
-      cpu * 0.027 + mem * 0.0139 + egress * 0.05 + diskCost;
-
-    // Pro plan includes $20/mo, Hobby includes $5/mo.
-    // Default assumption: Hobby. Override with RAILWAY_PLAN_INCLUDED_USD env var.
-    const includedCredit = parseFloat(process.env.RAILWAY_PLAN_INCLUDED_USD || "5");
-    const remainingCredit = Math.max(0, includedCredit - estimatedCost);
+    const ws = json.data?.workspace;
+    const customer = ws?.customer;
 
     return Response.json({
-      periodStart: startOfMonth.toISOString(),
-      periodEnd: now.toISOString(),
-      cpuHours: cpu,
-      memoryGbHours: mem,
-      networkEgressGb: egress,
-      diskGb: disk,
-      estimatedCostUsd: Number(estimatedCost.toFixed(2)),
-      includedCreditUsd: includedCredit,
-      remainingCreditUsd: Number(remainingCredit.toFixed(2)),
+      periodStart: customer?.billingPeriod?.start ?? startOfMonth.toISOString(),
+      periodEnd: customer?.billingPeriod?.end ?? null,
+      plan: ws?.plan ?? null,
+      cpuHours: map.CPU_USAGE ?? null,
+      memoryGbHours: map.MEMORY_USAGE_GB ?? null,
+      networkEgressGb: map.NETWORK_TX_GB ?? null,
+      diskGb: map.DISK_USAGE_GB ?? null,
+      currentUsageUsd: customer?.currentUsage ?? null,
+      creditBalanceUsd: customer?.creditBalance ?? null,
+      remainingUsageCreditUsd: customer?.remainingUsageCreditBalance ?? null,
+      appliedCreditsUsd: customer?.appliedCredits ?? null,
+      hasExhaustedFreePlan: customer?.hasExhaustedFreePlan ?? null,
+      isTrialing: customer?.isTrialing ?? null,
+      trialDaysRemaining: customer?.trialDaysRemaining ?? null,
     });
   } catch (err) {
     console.error("GET /api/usage/railway error:", err);

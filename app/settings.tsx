@@ -25,14 +25,19 @@ interface ElevenLabsUsage {
 
 interface RailwayUsage {
   periodStart: string;
-  periodEnd: string;
+  periodEnd: string | null;
+  plan: string | null;
   cpuHours: number | null;
   memoryGbHours: number | null;
   networkEgressGb: number | null;
   diskGb: number | null;
-  estimatedCostUsd: number | null;
-  includedCreditUsd: number | null;
-  remainingCreditUsd: number | null;
+  currentUsageUsd: number | null;
+  creditBalanceUsd: number | null;
+  remainingUsageCreditUsd: number | null;
+  appliedCreditsUsd: number | null;
+  hasExhaustedFreePlan: boolean | null;
+  isTrialing: boolean | null;
+  trialDaysRemaining: number | null;
 }
 
 export default function SettingsScreen() {
@@ -171,36 +176,56 @@ function ElevenLabsCard({ usage }: { usage: ElevenLabsUsage }) {
 }
 
 function RailwayCard({ usage }: { usage: RailwayUsage }) {
-  const periodLabel = `${new Date(usage.periodStart).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → oggi`;
-  const remaining = usage.remainingCreditUsd ?? null;
-  const included = usage.includedCreditUsd ?? null;
-  const used = usage.estimatedCostUsd ?? 0;
-  const pct = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
+  const startDate = new Date(usage.periodStart);
+  const endDate = usage.periodEnd ? new Date(usage.periodEnd) : null;
+  const periodLabel = endDate
+    ? `${startDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → ${endDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}`
+    : `${startDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → oggi`;
+
+  const currentUsage = usage.currentUsageUsd ?? 0;
+  const remaining = usage.remainingUsageCreditUsd;
+  const creditBalance = usage.creditBalanceUsd;
+
+  // Progress bar: if we have remaining credit, compute pct of original credit used.
+  const totalCredit = remaining !== null && remaining !== undefined
+    ? currentUsage + remaining
+    : null;
+  const pct = totalCredit && totalCredit > 0 ? Math.min(100, (currentUsage / totalCredit) * 100) : 0;
   const barColor = pct > 90 ? '#DC2626' : pct > 70 ? '#F59E0B' : '#10B981';
+
   return (
     <View style={{ gap: 10 }}>
+      {usage.plan && <Row label="Piano" value={String(usage.plan).toLowerCase()} />}
       <Row label="Periodo" value={periodLabel} />
-      {remaining !== null && (
+
+      {remaining !== null && remaining !== undefined && (
         <View style={styles.costHighlight}>
           <Text style={styles.costLabel}>Credito rimanente</Text>
           <Text style={styles.costValue}>${remaining.toFixed(2)}</Text>
         </View>
       )}
-      {included !== null && usage.estimatedCostUsd !== null && (
-        <>
-          <Row label="Usato / incluso nel piano" value={`$${used.toFixed(2)} / $${included.toFixed(2)}`} />
-          <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
-          </View>
-        </>
+
+      <Row label="Consumo periodo" value={`$${currentUsage.toFixed(2)}`} />
+      {creditBalance !== null && creditBalance !== undefined && (
+        <Row label="Saldo crediti account" value={`$${creditBalance.toFixed(2)}`} />
       )}
+
+      {totalCredit !== null && (
+        <View style={styles.barTrack}>
+          <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
+        </View>
+      )}
+
+      {usage.isTrialing && usage.trialDaysRemaining !== null && (
+        <Text style={styles.disclaimer}>
+          In prova: {usage.trialDaysRemaining} giorni rimanenti
+        </Text>
+      )}
+
       <Row label="CPU ore" value={usage.cpuHours !== null ? usage.cpuHours.toFixed(2) : '—'} />
       <Row label="Memoria GB·ora" value={usage.memoryGbHours !== null ? usage.memoryGbHours.toFixed(2) : '—'} />
       <Row label="Traffico in uscita" value={usage.networkEgressGb !== null ? `${usage.networkEgressGb.toFixed(2)} GB` : '—'} />
       <Row label="Disco usato" value={usage.diskGb !== null ? `${usage.diskGb.toFixed(2)} GB` : '—'} />
-      <Text style={styles.disclaimer}>
-        Stima. Imposta RAILWAY_PLAN_INCLUDED_USD nelle env vars per il tuo piano ($5 Hobby, $20 Pro). Dati ufficiali su Railway → Usage.
-      </Text>
     </View>
   );
 }

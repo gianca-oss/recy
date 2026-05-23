@@ -49,14 +49,15 @@ export default function HomeScreen() {
         }
       }
       if (railway.status === 'fulfilled') {
-        const { estimatedCostUsd, includedCreditUsd } = railway.value;
+        const { currentUsageUsd, remainingUsageCreditUsd } = railway.value;
         if (
-          typeof estimatedCostUsd === 'number' &&
-          typeof includedCreditUsd === 'number' &&
-          includedCreditUsd > 0 &&
-          estimatedCostUsd / includedCreditUsd > USAGE_WARNING_THRESHOLD
+          typeof currentUsageUsd === 'number' &&
+          typeof remainingUsageCreditUsd === 'number'
         ) {
-          warning = true;
+          const total = currentUsageUsd + remainingUsageCreditUsd;
+          if (total > 0 && currentUsageUsd / total > USAGE_WARNING_THRESHOLD) {
+            warning = true;
+          }
         }
       }
       setUsageWarning(warning);
