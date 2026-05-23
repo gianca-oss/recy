@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity, Alert,
   StyleSheet, SafeAreaView, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Share,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -86,6 +86,19 @@ export default function RecordingDetailScreen() {
         },
       ]
     );
+  }
+
+  async function exportText(content: string, suffix: string) {
+    if (!recording) return;
+    const filename = `${recording.title}-${suffix}`;
+    try {
+      await Share.share({
+        title: filename,
+        message: content,
+      });
+    } catch (err) {
+      console.error('Share error', err);
+    }
   }
 
   async function handleSummarize() {
@@ -315,9 +328,19 @@ export default function RecordingDetailScreen() {
                 }
               }}
             >
-              <Text style={styles.sectionLabel}>
-                Trascrizione{hasEdits ? ' · modificata' : ''}
-              </Text>
+              <View style={styles.cardHeader}>
+                <Text style={styles.sectionLabel}>
+                  Trascrizione{hasEdits ? ' · modificata' : ''}
+                </Text>
+                {!editingTranscript && (
+                  <TouchableOpacity
+                    onPress={() => exportText(displayedTranscript, 'trascrizione.txt')}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="share-outline" size={20} color={Colors.accent} />
+                  </TouchableOpacity>
+                )}
+              </View>
 
               {editingTranscript ? (
                 <>
@@ -391,7 +414,15 @@ export default function RecordingDetailScreen() {
 
           {recording.summary && (
             <View style={[styles.transcriptCard, { marginTop: 16 }]}>
-              <Text style={styles.sectionLabel}>Riassunto</Text>
+              <View style={styles.cardHeader}>
+                <Text style={styles.sectionLabel}>Riassunto</Text>
+                <TouchableOpacity
+                  onPress={() => exportText(recording.summary!, 'riassunto.md')}
+                  hitSlop={8}
+                >
+                  <Ionicons name="share-outline" size={20} color={Colors.accent} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.transcriptScrollBox}>
                 <ScrollView
                   nestedScrollEnabled
@@ -580,6 +611,10 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14, color: Colors.secondary, textTransform: 'uppercase',
     letterSpacing: 0.3, fontWeight: '500',
+  },
+  cardHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 12,
   },
   transcriptText: { fontSize: 17, color: Colors.label, lineHeight: 24 },
   transcriptScrollBox: { maxHeight: 360 },
