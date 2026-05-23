@@ -30,6 +30,11 @@ export async function GET() {
         measurement
         value
       }
+      me {
+        id
+        email
+        has2FA
+      }
     }
   `;
 
@@ -82,6 +87,11 @@ export async function GET() {
     const estimatedCost =
       cpu * 0.027 + mem * 0.0139 + egress * 0.05 + diskCost;
 
+    // Pro plan includes $20/mo, Hobby includes $5/mo.
+    // Default assumption: Hobby. Override with RAILWAY_PLAN_INCLUDED_USD env var.
+    const includedCredit = parseFloat(process.env.RAILWAY_PLAN_INCLUDED_USD || "5");
+    const remainingCredit = Math.max(0, includedCredit - estimatedCost);
+
     return Response.json({
       periodStart: startOfMonth.toISOString(),
       periodEnd: now.toISOString(),
@@ -90,6 +100,8 @@ export async function GET() {
       networkEgressGb: egress,
       diskGb: disk,
       estimatedCostUsd: Number(estimatedCost.toFixed(2)),
+      includedCreditUsd: includedCredit,
+      remainingCreditUsd: Number(remainingCredit.toFixed(2)),
     });
   } catch (err) {
     console.error("GET /api/usage/railway error:", err);

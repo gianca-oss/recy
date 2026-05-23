@@ -31,6 +31,8 @@ interface RailwayUsage {
   networkEgressGb: number | null;
   diskGb: number | null;
   estimatedCostUsd: number | null;
+  includedCreditUsd: number | null;
+  remainingCreditUsd: number | null;
 }
 
 export default function SettingsScreen() {
@@ -144,6 +146,7 @@ function ErrorRow({ message }: { message: string }) {
 function ElevenLabsCard({ usage }: { usage: ElevenLabsUsage }) {
   const used = usage.characterCount;
   const total = usage.characterLimit;
+  const remaining = Math.max(0, total - used);
   const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
   const reset = usage.nextResetUnix ? new Date(usage.nextResetUnix * 1000) : null;
   const resetText = reset
@@ -154,7 +157,11 @@ function ElevenLabsCard({ usage }: { usage: ElevenLabsUsage }) {
   return (
     <View style={{ gap: 10 }}>
       <Row label="Piano" value={usage.tier ?? '—'} />
-      <Row label="Crediti usati" value={`${used.toLocaleString('it-IT')} / ${total.toLocaleString('it-IT')}`} />
+      <View style={styles.costHighlight}>
+        <Text style={styles.costLabel}>Crediti rimanenti</Text>
+        <Text style={styles.costValue}>{remaining.toLocaleString('it-IT')}</Text>
+      </View>
+      <Row label="Usati" value={`${used.toLocaleString('it-IT')} / ${total.toLocaleString('it-IT')}`} />
       <View style={styles.barTrack}>
         <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
       </View>
@@ -165,21 +172,34 @@ function ElevenLabsCard({ usage }: { usage: ElevenLabsUsage }) {
 
 function RailwayCard({ usage }: { usage: RailwayUsage }) {
   const periodLabel = `${new Date(usage.periodStart).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → oggi`;
+  const remaining = usage.remainingCreditUsd ?? null;
+  const included = usage.includedCreditUsd ?? null;
+  const used = usage.estimatedCostUsd ?? 0;
+  const pct = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
+  const barColor = pct > 90 ? '#DC2626' : pct > 70 ? '#F59E0B' : '#10B981';
   return (
     <View style={{ gap: 10 }}>
       <Row label="Periodo" value={periodLabel} />
-      {usage.estimatedCostUsd !== null && (
+      {remaining !== null && (
         <View style={styles.costHighlight}>
-          <Text style={styles.costLabel}>Costo stimato (mese corrente)</Text>
-          <Text style={styles.costValue}>${usage.estimatedCostUsd.toFixed(2)}</Text>
+          <Text style={styles.costLabel}>Credito rimanente</Text>
+          <Text style={styles.costValue}>${remaining.toFixed(2)}</Text>
         </View>
+      )}
+      {included !== null && usage.estimatedCostUsd !== null && (
+        <>
+          <Row label="Usato / incluso nel piano" value={`$${used.toFixed(2)} / $${included.toFixed(2)}`} />
+          <View style={styles.barTrack}>
+            <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
+          </View>
+        </>
       )}
       <Row label="CPU ore" value={usage.cpuHours !== null ? usage.cpuHours.toFixed(2) : '—'} />
       <Row label="Memoria GB·ora" value={usage.memoryGbHours !== null ? usage.memoryGbHours.toFixed(2) : '—'} />
       <Row label="Traffico in uscita" value={usage.networkEgressGb !== null ? `${usage.networkEgressGb.toFixed(2)} GB` : '—'} />
       <Row label="Disco usato" value={usage.diskGb !== null ? `${usage.diskGb.toFixed(2)} GB` : '—'} />
       <Text style={styles.disclaimer}>
-        Stima basata sui prezzi standard Railway. Il valore reale può variare. Consulta Railway → Settings → Usage per i dati ufficiali.
+        Stima. Imposta RAILWAY_PLAN_INCLUDED_USD nelle env vars per il tuo piano ($5 Hobby, $20 Pro). Dati ufficiali su Railway → Usage.
       </Text>
     </View>
   );
