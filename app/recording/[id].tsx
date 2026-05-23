@@ -322,6 +322,7 @@ export default function RecordingDetailScreen() {
 
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [offlineProgress, setOfflineProgress] = useState(0);
+  const [offlineRemoving, setOfflineRemoving] = useState(false);
 
   async function downloadForOffline() {
     if (!recording?.serverId) return;
@@ -368,20 +369,29 @@ export default function RecordingDetailScreen() {
   }
 
   async function removeOffline() {
+    if (offlineRemoving) return;
     if (!recording?.offlineAudioPath) return;
+    setOfflineRemoving(true);
+    const path = recording.offlineAudioPath;
     try {
-      await FileSystem.deleteAsync(recording.offlineAudioPath, { idempotent: true });
-    } catch (err) {
-      console.log('Offline delete failed (continuing):', err);
-    }
-    await updateRecording(recording.id, { offlineAudioPath: null });
-    await load();
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync().catch(() => {});
+      await FileSystem.deleteAsync(path, { idempotent: true }).catch((err) => {
+        console.log('Offline delete failed (continuing):', err);
+      });
+      await updateRecording(recording.id, { offlineAudioPath: null });
+      const sound = soundRef.current;
       soundRef.current = null;
+      if (sound) {
+        await sound.unloadAsync().catch(() => {});
+      }
       setAudioLoaded(false);
       setPositionMs(0);
       setIsPlaying(false);
+      await load();
+    } catch (err) {
+      console.error('removeOffline error', err);
+      Alert.alert('Errore', 'Impossibile rimuovere il file offline.');
+    } finally {
+      setOfflineRemoving(false);
     }
   }
 
@@ -821,12 +831,22 @@ export default function RecordingDetailScreen() {
           {recording.serverId && (
             recording.offlineAudioPath ? (
               <TouchableOpacity
-                style={[styles.secondaryButton, { marginTop: 10 }]}
+                style={[styles.secondaryButton, { marginTop: 10 }, offlineRemoving && { opacity: 0.6 }]}
                 onPress={removeOffline}
+                disabled={offlineRemoving}
                 activeOpacity={0.8}
               >
-                <Ionicons name="checkmark-circle" size={17} color="#10B981" />
-                <Text style={styles.secondaryButtonText}>Disponibile offline · Rimuovi</Text>
+                {offlineRemoving ? (
+                  <>
+                    <ActivityIndicator color={Colors.accent} size="small" />
+                    <Text style={styles.secondaryButtonText}>Rimuovo…</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={17} color="#10B981" />
+                    <Text style={styles.secondaryButtonText}>Disponibile offline · Rimuovi</Text>
+                  </>
+                )}
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
