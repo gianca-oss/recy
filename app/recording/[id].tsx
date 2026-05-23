@@ -349,13 +349,21 @@ export default function RecordingDetailScreen() {
                   </View>
                 </>
               ) : (
-                <TouchableOpacity onPress={startEditTranscript} activeOpacity={0.6}>
-                  <HighlightedText
-                    text={displayedTranscript}
-                    query={highlight}
-                    style={styles.transcriptText}
-                  />
-                </TouchableOpacity>
+                <View style={styles.transcriptScrollBox}>
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                    persistentScrollbar
+                  >
+                    <TouchableOpacity onPress={startEditTranscript} activeOpacity={0.6}>
+                      <HighlightedText
+                        text={displayedTranscript}
+                        query={highlight}
+                        style={styles.transcriptText}
+                      />
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
               )}
             </View>
           )}
@@ -384,7 +392,15 @@ export default function RecordingDetailScreen() {
           {recording.summary && (
             <View style={[styles.transcriptCard, { marginTop: 16 }]}>
               <Text style={styles.sectionLabel}>Riassunto</Text>
-              <Text style={styles.transcriptText} selectable>{recording.summary}</Text>
+              <View style={styles.transcriptScrollBox}>
+                <ScrollView
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  persistentScrollbar
+                >
+                  <Text style={styles.transcriptText} selectable>{recording.summary}</Text>
+                </ScrollView>
+              </View>
             </View>
           )}
 
@@ -566,6 +582,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3, fontWeight: '500',
   },
   transcriptText: { fontSize: 17, color: Colors.label, lineHeight: 24 },
+  transcriptScrollBox: { maxHeight: 360 },
   highlightMatch: { backgroundColor: '#FEF3C7', fontWeight: '600' },
   transcriptInput: {
     fontSize: 17, color: Colors.label, lineHeight: 24,
