@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let _s3: S3Client | null = null;
@@ -39,6 +39,23 @@ export async function getDownloadPresignedUrl(key: string) {
   });
   const url = await getSignedUrl(getS3(), command, { expiresIn: 3600 });
   return url;
+}
+
+export async function getBucketUsage() {
+  let totalBytes = 0;
+  let count = 0;
+  let ContinuationToken: string | undefined;
+  do {
+    const res = await getS3().send(
+      new ListObjectsV2Command({ Bucket: getBucket(), ContinuationToken })
+    );
+    for (const obj of res.Contents ?? []) {
+      totalBytes += obj.Size ?? 0;
+      count += 1;
+    }
+    ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (ContinuationToken);
+  return { totalBytes, count };
 }
 
 export async function deleteObject(key: string) {
