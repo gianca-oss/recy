@@ -42,9 +42,12 @@ export default function HomeScreen() {
         await runSync();
         checkUsageWarning();
 
-        // If any recording is currently transcribing, poll every 4s.
+        // Poll every 4s if any recording is transcribing or summarizing.
         const all = await getAllRecordings();
-        if (all.some((r) => r.status === 'transcribing')) {
+        const inProgress = all.some(
+          (r) => r.status === 'transcribing' || (r.summarizationStartedAt && !r.summary)
+        );
+        if (inProgress) {
           pollTimer = setInterval(runSync, 4000);
         }
       })();

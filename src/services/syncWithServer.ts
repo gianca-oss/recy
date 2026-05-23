@@ -9,6 +9,8 @@ interface ServerRecording {
   durationSeconds: number;
   status?: RecordingStatus;
   syncState?: SyncState;
+  summarizationStartedAt?: string | null;
+  summary?: string | null;
 }
 
 /**
@@ -47,6 +49,12 @@ export async function syncAllFromServer(): Promise<number> {
     if (!rec.serverId) patch.serverId = match.id;
     if (match.status && match.status !== rec.status) patch.status = match.status;
     if (match.syncState && match.syncState !== rec.syncState) patch.syncState = match.syncState;
+    if (match.summarizationStartedAt !== undefined && match.summarizationStartedAt !== rec.summarizationStartedAt) {
+      patch.summarizationStartedAt = match.summarizationStartedAt;
+    }
+    if (match.summary !== undefined && match.summary !== rec.summary) {
+      patch.summary = match.summary;
+    }
 
     if (Object.keys(patch).length > 0) {
       await updateRecording(rec.id, patch);

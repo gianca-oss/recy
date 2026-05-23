@@ -32,6 +32,7 @@ export interface Recording {
   transcriptSegments?: TranscriptSegment[] | null;
   transcriptFetchedAt?: string | null;
   transcriptionStartedAt?: string | null;
+  summarizationStartedAt?: string | null;
   summary?: string | null;
   createdAt: string;
   updatedAt: string;

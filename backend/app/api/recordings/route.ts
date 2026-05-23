@@ -15,6 +15,8 @@ export async function GET() {
         status: true,
         syncState: true,
         bookmarks: true,
+        transcriptionStartedAt: true,
+        summarizationStartedAt: true,
         createdAt: true,
         updatedAt: true,
       },

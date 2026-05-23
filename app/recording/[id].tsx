@@ -17,10 +17,12 @@ export default function RecordingDetailScreen() {
   const router = useRouter();
   const { id, q } = useLocalSearchParams<{ id: string; q?: string }>();
   const [recording, setRecording] = useState<Recording | null>(null);
-  const [summarizing, setSummarizing] = useState(false);
   const [progress, setProgress] = useState<{ elapsed: number; sizeBytes: number | null }>({ elapsed: 0, sizeBytes: null });
+  const [summaryElapsed, setSummaryElapsed] = useState(0);
   const transcribing = recording?.status === 'transcribing';
   const transcriptionStartedAt = recording?.transcriptionStartedAt ?? null;
+  const summarizing = !!recording?.summarizationStartedAt && !recording?.summary;
+  const summarizationStartedAt = recording?.summarizationStartedAt ?? null;
   const scrollRef = useRef<ScrollView>(null);
   const transcriptY = useRef(0);
   const scrolledRef = useRef(false);
@@ -52,6 +54,7 @@ export default function RecordingDetailScreen() {
         summary: server.summary ?? rec.summary ?? null,
         transcriptFetchedAt: new Date().toISOString(),
         transcriptionStartedAt: server.transcriptionStartedAt ?? null,
+        summarizationStartedAt: server.summarizationStartedAt ?? null,
       };
       if (server.title && server.title !== rec.title) patch.title = server.title;
       await updateRecording(rec.id, patch);
@@ -72,16 +75,22 @@ export default function RecordingDetailScreen() {
       const rec = await load();
       const synced = await syncFromServer(rec);
       const current = synced ?? rec;
-      if (current?.status === 'transcribing') {
-        if (current.serverId) {
-          getRecordingAudioInfo(current.serverId)
-            .then((info) => !cancelled && setProgress((p) => ({ ...p, sizeBytes: info.size })))
-            .catch(() => {});
-        }
+      const needsPolling = current?.status === 'transcribing'
+        || (current?.summarizationStartedAt && !current?.summary);
+      if (current?.status === 'transcribing' && current.serverId) {
+        getRecordingAudioInfo(current.serverId)
+          .then((info) => !cancelled && setProgress((p) => ({ ...p, sizeBytes: info.size })))
+          .catch(() => {});
+      }
+      if (needsPolling) {
         pollTimer = setInterval(async () => {
           if (cancelled) return;
           const fresh = await syncFromServer(current);
-          if (fresh && fresh.status !== 'transcribing' && pollTimer) {
+          const still = fresh && (
+            fresh.status === 'transcribing' ||
+            (fresh.summarizationStartedAt && !fresh.summary)
+          );
+          if (!still && pollTimer) {
             clearInterval(pollTimer);
             pollTimer = null;
             setProgress({ elapsed: 0, sizeBytes: null });
@@ -107,6 +116,18 @@ export default function RecordingDetailScreen() {
     const tick = setInterval(update, 1000);
     return () => clearInterval(tick);
   }, [transcribing, transcriptionStartedAt]);
+
+  useEffect(() => {
+    if (!summarizing || !summarizationStartedAt) {
+      setSummaryElapsed(0);
+      return;
+    }
+    const startMs = new Date(summarizationStartedAt).getTime();
+    const update = () => setSummaryElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+    update();
+    const tick = setInterval(update, 1000);
+    return () => clearInterval(tick);
+  }, [summarizing, summarizationStartedAt]);
 
   function handleDelete() {
     if (!recording) return;
@@ -156,19 +177,12 @@ export default function RecordingDetailScreen() {
       Alert.alert('Impossibile riassumere', 'La registrazione non è ancora sul cloud.');
       return;
     }
-    setSummarizing(true);
     try {
-      const result = await summarizeRecording(recording.serverId);
-      await updateRecording(recording.id, {
-        summary: result.summary,
-        syncState: 'summarized',
-      });
-      await load();
+      await summarizeRecording(recording.serverId);
+      await syncFromServer(recording);
     } catch (err) {
       console.error('Summarize error', err);
-      Alert.alert('Errore', `Riassunto fallito: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
-    } finally {
-      setSummarizing(false);
+      Alert.alert('Errore', `Avvio riassunto fallito: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
     }
   }
 
@@ -261,7 +275,7 @@ export default function RecordingDetailScreen() {
 
   const displayedTranscript = recording.transcriptEdited ?? recording.transcript ?? null;
   const canTranscribe = recording.syncState === 'uploaded' && !displayedTranscript;
-  const canSummarize = !!displayedTranscript && !recording.summary && !!recording.serverId;
+  const canSummarize = !!displayedTranscript && !recording.summary && !!recording.serverId && !summarizing;
   const hasEdits = recording.transcriptEdited && recording.transcriptEdited !== recording.transcript;
   const highlight = typeof q === 'string' && q.length > 0 ? q : null;
 
@@ -425,25 +439,33 @@ export default function RecordingDetailScreen() {
             </View>
           )}
 
-          {canSummarize && (
+          {canSummarize && !summarizing && (
             <TouchableOpacity
-              style={[styles.actionButton, styles.summaryButton, summarizing && { opacity: 0.6 }]}
+              style={[styles.actionButton, styles.summaryButton]}
               onPress={handleSummarize}
-              disabled={summarizing}
               activeOpacity={0.8}
             >
-              {summarizing ? (
-                <>
-                  <ActivityIndicator color={Colors.white} size="small" />
-                  <Text style={styles.actionButtonText}>Riassunto in corso…</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="sparkles-outline" size={18} color={Colors.white} />
-                  <Text style={styles.actionButtonText}>Genera riassunto</Text>
-                </>
-              )}
+              <Ionicons name="sparkles-outline" size={18} color={Colors.white} />
+              <Text style={styles.actionButtonText}>Genera riassunto</Text>
             </TouchableOpacity>
+          )}
+
+          {summarizing && (
+            <View style={[styles.progressCard, { marginTop: 16, marginBottom: 0 }]}>
+              <View style={styles.progressHeader}>
+                <ActivityIndicator color={Colors.accent} size="small" />
+                <Text style={styles.progressTitle}>Riassunto in corso</Text>
+              </View>
+              <View style={styles.progressMeta}>
+                <View style={styles.progressMetaItem}>
+                  <Text style={styles.progressMetaLabel}>Trascorsi</Text>
+                  <Text style={styles.progressMetaValue}>{formatSeconds(summaryElapsed)}</Text>
+                </View>
+              </View>
+              <Text style={styles.progressNote}>
+                Puoi uscire da questa schermata. Il riassunto continua sul server.
+              </Text>
+            </View>
           )}
 
           {recording.summary && (

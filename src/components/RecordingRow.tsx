@@ -96,6 +96,11 @@ export default function RecordingRow({ recording, onPress, onLongPress, isLast, 
               <View style={styles.transcribingDot} />
               <Text style={[styles.meta, { color: Colors.accent }]}>Trascrizione in corso…</Text>
             </>
+          ) : recording.summarizationStartedAt && !recording.summary ? (
+            <>
+              <View style={styles.transcribingDot} />
+              <Text style={[styles.meta, { color: Colors.accent }]}>Riassunto in corso…</Text>
+            </>
           ) : recording.status === 'failed' ? (
             <>
               <Ionicons name="alert-circle" size={14} color="#DC2626" />
