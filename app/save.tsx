@@ -33,10 +33,7 @@ export default function SaveScreen() {
   }>();
 
   const recordedAt = params.recordedAt ?? new Date().toISOString();
-  const initialTitle =
-    params.title && !params.title.startsWith('Lezione') && !params.title.startsWith('Registrazione')
-      ? params.title
-      : defaultTitleFromDate(recordedAt);
+  const initialTitle = params.title?.trim() || defaultTitleFromDate(recordedAt);
 
   const [title, setTitle] = useState(initialTitle);
   const [saving, setSaving] = useState(false);

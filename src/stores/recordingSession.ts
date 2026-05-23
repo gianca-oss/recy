@@ -4,16 +4,13 @@ import type { RecordingSessionState, Bookmark } from '../types';
 const SESSION_KEY = '@recording_session';
 
 function generateTitle(): string {
-  const now = new Date();
-  const day = now.getDate();
-  const months = [
-    'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
-    'lug', 'ago', 'set', 'ott', 'nov', 'dic',
-  ];
-  const month = months[now.getMonth()];
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `Lezione ${day} ${month}, ${hours}:${minutes}`;
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}-${hh}${mi}-`;
 }
 
 export function createNewSession(): RecordingSessionState {

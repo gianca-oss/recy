@@ -191,7 +191,7 @@ export default function HomeScreen() {
           <Text style={styles.emptySubtitle}>
             {searchQuery
               ? 'Prova con un altro termine'
-              : 'Registra la tua prima lezione\ncon il pulsante qui sotto'}
+              : 'Premi il pulsante in basso\nper iniziare a registrare'}
           </Text>
         </View>
       ) : (
