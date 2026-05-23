@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LessonStatus {
+  recorded
+  transcribing
+  transcribed
+  failed
+}
+
+enum SyncState {
+  local_only
+  uploaded
+  transcribed
+  summarized
+}
+
+enum LessonSource {
+  recording
+  import
+}
+
+model Lesson {
+  id                 String       @id @default(cuid())
+  userId             String?
+  title              String
+  subject            String?
+  recordedAt         DateTime
+  source             LessonSource @default(recording)
+  durationSeconds    Int
+  audioUrl           String?
+  status             LessonStatus @default(recorded)
+  syncState          SyncState    @default(uploaded)
+  bookmarks          Json         @default("[]")
+  transcriptVerbatim String?      @db.Text
+  transcriptClean    String?      @db.Text
+  transcriptEdited   String?      @db.Text
+  transcriptSegments Json?
+  summary            String?      @db.Text
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([recordedAt])
+}
