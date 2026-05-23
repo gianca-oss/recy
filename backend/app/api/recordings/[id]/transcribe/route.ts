@@ -16,6 +16,7 @@ async function runTranscription(id: string, audioUrl: string) {
         syncState: "transcribed",
         transcriptVerbatim: result.text,
         transcriptSegments: result.words as unknown as object,
+        transcriptionStartedAt: null,
       },
     });
     console.log(`[transcribe] ${id} completed (${result.text.length} chars)`);
@@ -53,7 +54,7 @@ export async function POST(
 
   await prisma.recording.update({
     where: { id },
-    data: { status: "transcribing" },
+    data: { status: "transcribing", transcriptionStartedAt: new Date() },
   });
 
   // Fire-and-forget: job continues server-side after response.

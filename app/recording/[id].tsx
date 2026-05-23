@@ -18,8 +18,9 @@ export default function RecordingDetailScreen() {
   const { id, q } = useLocalSearchParams<{ id: string; q?: string }>();
   const [recording, setRecording] = useState<Recording | null>(null);
   const [summarizing, setSummarizing] = useState(false);
-  const [progress, setProgress] = useState<{ elapsed: number; sizeBytes: number | null; startedAt: number | null }>({ elapsed: 0, sizeBytes: null, startedAt: null });
+  const [progress, setProgress] = useState<{ elapsed: number; sizeBytes: number | null }>({ elapsed: 0, sizeBytes: null });
   const transcribing = recording?.status === 'transcribing';
+  const transcriptionStartedAt = recording?.transcriptionStartedAt ?? null;
   const scrollRef = useRef<ScrollView>(null);
   const transcriptY = useRef(0);
   const scrolledRef = useRef(false);
@@ -50,6 +51,7 @@ export default function RecordingDetailScreen() {
         transcriptSegments: server.transcriptSegments ?? rec.transcriptSegments ?? null,
         summary: server.summary ?? rec.summary ?? null,
         transcriptFetchedAt: new Date().toISOString(),
+        transcriptionStartedAt: server.transcriptionStartedAt ?? null,
       };
       if (server.title && server.title !== rec.title) patch.title = server.title;
       await updateRecording(rec.id, patch);
@@ -71,11 +73,6 @@ export default function RecordingDetailScreen() {
       const synced = await syncFromServer(rec);
       const current = synced ?? rec;
       if (current?.status === 'transcribing') {
-        setProgress((p) => ({
-          ...p,
-          startedAt: p.startedAt ?? Date.now(),
-          elapsed: 0,
-        }));
         if (current.serverId) {
           getRecordingAudioInfo(current.serverId)
             .then((info) => !cancelled && setProgress((p) => ({ ...p, sizeBytes: info.size })))
@@ -87,7 +84,7 @@ export default function RecordingDetailScreen() {
           if (fresh && fresh.status !== 'transcribing' && pollTimer) {
             clearInterval(pollTimer);
             pollTimer = null;
-            setProgress({ elapsed: 0, sizeBytes: null, startedAt: null });
+            setProgress({ elapsed: 0, sizeBytes: null });
           }
         }, 3000);
       }
@@ -100,15 +97,16 @@ export default function RecordingDetailScreen() {
   }, [load, syncFromServer]));
 
   useEffect(() => {
-    if (!transcribing || !progress.startedAt) return;
-    const tick = setInterval(() => {
-      setProgress((p) => ({
-        ...p,
-        elapsed: Math.floor((Date.now() - (p.startedAt ?? Date.now())) / 1000),
-      }));
-    }, 1000);
+    if (!transcribing || !transcriptionStartedAt) return;
+    const startMs = new Date(transcriptionStartedAt).getTime();
+    const update = () => setProgress((p) => ({
+      ...p,
+      elapsed: Math.max(0, Math.floor((Date.now() - startMs) / 1000)),
+    }));
+    update();
+    const tick = setInterval(update, 1000);
     return () => clearInterval(tick);
-  }, [transcribing, progress.startedAt]);
+  }, [transcribing, transcriptionStartedAt]);
 
   function handleDelete() {
     if (!recording) return;
@@ -181,12 +179,11 @@ export default function RecordingDetailScreen() {
     }
     try {
       await transcribeRecording(recording.serverId);
-      await updateRecording(recording.id, { status: 'transcribing' });
-      setProgress({ elapsed: 0, sizeBytes: null, startedAt: Date.now() });
+      setProgress({ elapsed: 0, sizeBytes: null });
+      await syncFromServer(recording);
       getRecordingAudioInfo(recording.serverId)
         .then((info) => setProgress((p) => ({ ...p, sizeBytes: info.size })))
         .catch(() => {});
-      await load();
     } catch (err) {
       console.error('Transcribe error', err);
       Alert.alert('Errore', `Avvio trascrizione fallito: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);

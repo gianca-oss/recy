@@ -43,6 +43,7 @@ model Recording {
   transcriptEdited   String?         @db.Text
   transcriptSegments Json?
   summary            String?         @db.Text
+  transcriptionStartedAt DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
