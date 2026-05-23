@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 1,
   },
-  backText: { fontSize: 16, color: Colors.accent },
+  backText: { fontSize: 18, color: Colors.accent },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 3.5,
   },
-  statusText: { fontSize: 13, fontWeight: '500' },
+  statusText: { fontSize: 15, fontWeight: '500' },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -493,18 +493,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   idleTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
     color: Colors.label,
   },
   idleSubtitle: {
-    fontSize: 15,
+    fontSize: 17,
     color: Colors.secondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   subjectLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.secondary,
   },
   timer: {
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   bookmarkText: {
-    fontSize: 13,
+    fontSize: 15,
     color: Colors.secondary,
   },
   controls: {
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   controlLabel: {
-    fontSize: 11.5,
+    fontSize: 13.5,
     color: Colors.secondary,
     fontWeight: '500',
   },
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionSheetMessage: {
-    fontSize: 13,
+    fontSize: 15,
     color: Colors.secondary,
     textAlign: 'center',
     lineHeight: 18,
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionSheetDestructiveText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: Colors.red,
   },
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     zIndex: 51,
   },
   actionSheetCancelText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: Colors.accent,
   },

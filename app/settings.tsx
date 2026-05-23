@@ -216,12 +216,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
   topBar: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 8 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 1 },
-  backText: { fontSize: 16, color: Colors.accent },
+  backText: { fontSize: 18, color: Colors.accent },
   scroll: { padding: 18, paddingBottom: 40 },
   title: { ...Fonts.title, color: Colors.label, marginBottom: 4 },
-  subtitle: { fontSize: 13, color: Colors.secondary, marginBottom: 24 },
+  subtitle: { fontSize: 15, color: Colors.secondary, marginBottom: 24 },
   sectionLabel: {
-    fontSize: 12, color: Colors.secondary, textTransform: 'uppercase',
+    fontSize: 14, color: Colors.secondary, textTransform: 'uppercase',
     letterSpacing: 0.3, fontWeight: '500', marginBottom: 8, paddingLeft: 4, marginTop: 18,
   },
   card: {
@@ -231,26 +231,26 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  rowLabel: { fontSize: 14, color: Colors.secondary, flex: 1 },
-  rowValue: { fontSize: 14, color: Colors.label, fontWeight: '600' },
+  rowLabel: { fontSize: 16, color: Colors.secondary, flex: 1 },
+  rowValue: { fontSize: 16, color: Colors.label, fontWeight: '600' },
   barTrack: {
     height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginTop: 2,
   },
   barFill: { height: '100%', borderRadius: 3 },
-  barMeta: { fontSize: 12, color: Colors.secondary },
+  barMeta: { fontSize: 14, color: Colors.secondary },
   errorBox: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-start',
     backgroundColor: '#FEF2F2', borderRadius: 8, padding: 10,
   },
-  errorText: { fontSize: 12, color: '#DC2626', flex: 1, lineHeight: 16 },
+  errorText: { fontSize: 14, color: '#DC2626', flex: 1, lineHeight: 16 },
   costHighlight: {
     backgroundColor: '#F3F4F6', borderRadius: 9, padding: 10,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginVertical: 2,
   },
-  costLabel: { fontSize: 13, color: Colors.secondary, fontWeight: '500', flex: 1 },
-  costValue: { fontSize: 18, color: Colors.label, fontWeight: '700' },
+  costLabel: { fontSize: 15, color: Colors.secondary, fontWeight: '500', flex: 1 },
+  costValue: { fontSize: 20, color: Colors.label, fontWeight: '700' },
   disclaimer: {
-    fontSize: 11, color: Colors.tertiary, lineHeight: 15, marginTop: 4, fontStyle: 'italic',
+    fontSize: 13, color: Colors.tertiary, lineHeight: 15, marginTop: 4, fontStyle: 'italic',
   },
 });

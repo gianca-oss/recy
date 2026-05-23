@@ -179,12 +179,12 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: 28, gap: 6 },
   successIcon: { marginBottom: 4 },
   headerTitle: { ...Fonts.heading, color: Colors.label },
-  headerSubtitle: { fontSize: 14, color: Colors.secondary },
+  headerSubtitle: { fontSize: 16, color: Colors.secondary },
   fieldContainer: { marginBottom: 20 },
-  fieldLabel: { fontSize: 12.5, color: Colors.secondary, fontWeight: '500', marginBottom: 6, paddingLeft: 2 },
+  fieldLabel: { fontSize: 14.5, color: Colors.secondary, fontWeight: '500', marginBottom: 6, paddingLeft: 2 },
   textInput: {
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
-    borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontSize: 16, color: Colors.label,
+    borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontSize: 18, color: Colors.label,
   },
   subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   subjectChip: {
@@ -192,12 +192,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
   },
   subjectChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  subjectChipText: { fontSize: 14, fontWeight: '500', color: Colors.label },
+  subjectChipText: { fontSize: 16, fontWeight: '500', color: Colors.label },
   subjectChipTextActive: { color: Colors.white },
   saveButton: {
     backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: 13,
     alignItems: 'center', marginTop: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
   },
-  saveButtonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  saveButtonText: { color: Colors.white, fontSize: 18, fontWeight: '600' },
 });

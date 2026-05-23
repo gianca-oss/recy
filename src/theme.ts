@@ -29,12 +29,12 @@ export function getSubjectColor(subject: string | null): string {
 }
 
 export const Fonts = {
-  title: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.5 },
-  heading: { fontSize: 21, fontWeight: '700' as const, letterSpacing: -0.4 },
-  body: { fontSize: 15, fontWeight: '400' as const },
-  caption: { fontSize: 13, fontWeight: '400' as const },
-  small: { fontSize: 11.5, fontWeight: '500' as const },
-  timer: { fontSize: 54, fontWeight: '300' as const, letterSpacing: -1.5 },
+  title: { fontSize: 33, fontWeight: '700' as const, letterSpacing: -0.5 },
+  heading: { fontSize: 25, fontWeight: '700' as const, letterSpacing: -0.4 },
+  body: { fontSize: 17, fontWeight: '400' as const },
+  caption: { fontSize: 15, fontWeight: '400' as const },
+  small: { fontSize: 13.5, fontWeight: '500' as const },
+  timer: { fontSize: 62, fontWeight: '300' as const, letterSpacing: -1.5 },
 };
 
 export const CommonStyles = StyleSheet.create({
