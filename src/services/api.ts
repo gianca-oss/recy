@@ -86,6 +86,30 @@ export async function transcribeRecording(id: string) {
   return res.json();
 }
 
+export async function fetchUsageSummary() {
+  const res = await apiFetch('/api/usage');
+  if (!res.ok) throw new Error(`Usage failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchElevenLabsUsage() {
+  const res = await apiFetch('/api/usage/elevenlabs');
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`ElevenLabs usage failed: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
+export async function fetchRailwayUsage() {
+  const res = await apiFetch('/api/usage/railway');
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Railway usage failed: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
 export async function deleteRecording(id: string) {
   const res = await apiFetch(`/api/recordings/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Delete recording failed: ${res.status}`);

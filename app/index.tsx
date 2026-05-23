@@ -107,13 +107,22 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Recy</Text>
-        <TouchableOpacity
-          style={styles.importButton}
-          onPress={() => router.push('/import')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="cloud-upload-outline" size={20} color={Colors.accent} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="stats-chart-outline" size={20} color={Colors.accent} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push('/import')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="cloud-upload-outline" size={20} color={Colors.accent} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -201,7 +210,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  importButton: {
+  headerActions: { flexDirection: 'row', gap: 8 },
+  iconButton: {
     width: 40,
     height: 40,
     borderRadius: 11,
