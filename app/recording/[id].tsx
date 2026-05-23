@@ -167,8 +167,12 @@ export default function RecordingDetailScreen() {
     setAudioLoading(true);
     try {
       let uri: string | null = null;
-      // Prefer the local file when available
-      if (recording.audioUri) uri = recording.audioUri;
+      // Priority: explicit offline copy → original local recording → server stream
+      if (recording.offlineAudioPath) {
+        const offline = await FileSystem.getInfoAsync(recording.offlineAudioPath);
+        if (offline.exists) uri = recording.offlineAudioPath;
+      }
+      if (!uri && recording.audioUri) uri = recording.audioUri;
       if (!uri && recording.serverId) {
         const info = await getRecordingAudioInfo(recording.serverId);
         uri = info.url;
@@ -284,6 +288,71 @@ export default function RecordingDetailScreen() {
     } catch (err) {
       console.error('Export error', err);
       Alert.alert('Errore', 'Impossibile esportare il file.');
+    }
+  }
+
+  const [offlineDownloading, setOfflineDownloading] = useState(false);
+  const [offlineProgress, setOfflineProgress] = useState(0);
+
+  async function downloadForOffline() {
+    if (!recording?.serverId) return;
+    setOfflineDownloading(true);
+    setOfflineProgress(0);
+    try {
+      const info = await getRecordingAudioInfo(recording.serverId);
+      if (!info.url) throw new Error('No URL');
+      const safeId = recording.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const ext = info.contentType?.includes('mp4') ? 'm4a' : 'audio';
+      const dir = `${FileSystem.documentDirectory}offline/`;
+      const dirInfo = await FileSystem.getInfoAsync(dir);
+      if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      const path = `${dir}${safeId}.${ext}`;
+      const resumable = FileSystem.createDownloadResumable(
+        info.url,
+        path,
+        {},
+        (p) => {
+          if (p.totalBytesExpectedToWrite > 0) {
+            setOfflineProgress(p.totalBytesWritten / p.totalBytesExpectedToWrite);
+          }
+        }
+      );
+      const result = await resumable.downloadAsync();
+      if (!result?.uri) throw new Error('Download failed');
+      await updateRecording(recording.id, { offlineAudioPath: result.uri });
+      await load();
+      // Unload current sound so player picks up the offline file on next play
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+        setAudioLoaded(false);
+        setPositionMs(0);
+        setIsPlaying(false);
+      }
+    } catch (err) {
+      console.error('Offline download error', err);
+      Alert.alert('Errore', 'Download offline fallito.');
+    } finally {
+      setOfflineDownloading(false);
+      setOfflineProgress(0);
+    }
+  }
+
+  async function removeOffline() {
+    if (!recording?.offlineAudioPath) return;
+    try {
+      await FileSystem.deleteAsync(recording.offlineAudioPath, { idempotent: true });
+    } catch (err) {
+      console.log('Offline delete failed (continuing):', err);
+    }
+    await updateRecording(recording.id, { offlineAudioPath: null });
+    await load();
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current = null;
+      setAudioLoaded(false);
+      setPositionMs(0);
+      setIsPlaying(false);
     }
   }
 
@@ -718,6 +787,40 @@ export default function RecordingDetailScreen() {
               <Ionicons name="cloud-download-outline" size={17} color={Colors.accent} />
               <Text style={styles.secondaryButtonText}>Scarica audio originale</Text>
             </TouchableOpacity>
+          )}
+
+          {recording.serverId && (
+            recording.offlineAudioPath ? (
+              <TouchableOpacity
+                style={[styles.secondaryButton, { marginTop: 10 }]}
+                onPress={removeOffline}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark-circle" size={17} color="#10B981" />
+                <Text style={styles.secondaryButtonText}>Disponibile offline · Rimuovi</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.secondaryButton, { marginTop: 10 }, offlineDownloading && { opacity: 0.7 }]}
+                onPress={downloadForOffline}
+                disabled={offlineDownloading}
+                activeOpacity={0.8}
+              >
+                {offlineDownloading ? (
+                  <>
+                    <ActivityIndicator color={Colors.accent} size="small" />
+                    <Text style={styles.secondaryButtonText}>
+                      Download offline · {Math.round(offlineProgress * 100)}%
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="save-outline" size={17} color={Colors.accent} />
+                    <Text style={styles.secondaryButtonText}>Salva per offline</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )
           )}
 
           <TouchableOpacity

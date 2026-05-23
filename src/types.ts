@@ -34,6 +34,7 @@ export interface Recording {
   transcriptionStartedAt?: string | null;
   summarizationStartedAt?: string | null;
   summary?: string | null;
+  offlineAudioPath?: string | null;
   createdAt: string;
   updatedAt: string;
 }
