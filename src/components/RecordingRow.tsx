@@ -38,10 +38,11 @@ function formatDate(isoDate: string): string {
 interface Props {
   recording: Recording;
   onPress: () => void;
+  onLongPress?: () => void;
   isLast: boolean;
 }
 
-export default function RecordingRow({ recording, onPress, isLast }: Props) {
+export default function RecordingRow({ recording, onPress, onLongPress, isLast }: Props) {
   const subjectColor = getSubjectColor(recording.subject);
   const sync = SyncIcons[recording.syncState];
 
@@ -49,6 +50,8 @@ export default function RecordingRow({ recording, onPress, isLast }: Props) {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
       style={[styles.row, !isLast && styles.rowBorder]}
     >
       <View style={[styles.iconTile, { backgroundColor: subjectColor + '1a' }]}>

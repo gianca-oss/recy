@@ -31,6 +31,14 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+export async function removeFromQueue(recordingId: string): Promise<void> {
+  const queue = await getQueue();
+  const filtered = queue.filter((q) => q.recordingId !== recordingId);
+  if (filtered.length !== queue.length) {
+    await saveQueue(filtered);
+  }
+}
+
 export async function enqueueUpload(recording: Recording): Promise<void> {
   const queue = await getQueue();
   const exists = queue.find((q) => q.recordingId === recording.id);

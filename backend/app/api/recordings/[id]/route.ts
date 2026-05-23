@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { deleteObject } from "@/lib/s3";
 
 export async function GET(
   _request: NextRequest,
@@ -56,6 +57,18 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const recording = await prisma.recording.findUnique({
+      where: { id },
+      select: { audioUrl: true },
+    });
+    if (!recording) {
+      return Response.json({ error: "Recording not found" }, { status: 404 });
+    }
+    if (recording.audioUrl) {
+      await deleteObject(recording.audioUrl).catch((err) => {
+        console.error("S3 delete failed (continuing):", err);
+      });
+    }
     await prisma.recording.delete({ where: { id } });
     return Response.json({ success: true });
   } catch (err) {

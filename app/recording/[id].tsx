@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../../src/theme';
 import { getAllRecordings, updateRecording } from '../../src/stores/recordingStore';
 import { transcribeRecording } from '../../src/services/api';
+import { deleteRecordingFully } from '../../src/services/deleteRecording';
 import type { Recording } from '../../src/types';
 
 export default function RecordingDetailScreen() {
@@ -23,6 +24,29 @@ export default function RecordingDetailScreen() {
   }, [id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  function handleDelete() {
+    if (!recording) return;
+    Alert.alert(
+      'Elimina registrazione',
+      `Sei sicuro di voler eliminare "${recording.title}"? Questa azione non può essere annullata.`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRecordingFully(recording);
+              router.replace('/');
+            } catch (err) {
+              Alert.alert('Errore', `Impossibile eliminare: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function handleTranscribe() {
     if (!recording?.serverId) {
@@ -129,6 +153,15 @@ export default function RecordingDetailScreen() {
             <Text style={styles.transcriptText}>{recording.transcript}</Text>
           </View>
         )}
+
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="trash-outline" size={17} color="#DC2626" />
+          <Text style={styles.deleteButtonText}>Elimina registrazione</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -164,4 +197,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3, fontWeight: '500', marginBottom: 8,
   },
   transcriptText: { fontSize: 15, color: Colors.label, lineHeight: 22 },
+  deleteButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, borderRadius: 13,
+    backgroundColor: Colors.card, borderWidth: 1, borderColor: '#FECACA',
+    marginTop: 24,
+  },
+  deleteButtonText: { color: '#DC2626', fontSize: 15, fontWeight: '600' },
 });

@@ -9,6 +9,7 @@ import { Colors, Fonts } from '../src/theme';
 import { getAllRecordings } from '../src/stores/recordingStore';
 import { loadDanglingSession, clearSession } from '../src/stores/recordingSession';
 import { processQueue, subscribeToUploadQueue } from '../src/services/uploadQueue';
+import { deleteRecordingFully } from '../src/services/deleteRecording';
 import RecordingRow from '../src/components/RecordingRow';
 import type { Recording } from '../src/types';
 
@@ -33,6 +34,28 @@ export default function HomeScreen() {
   async function loadRecordings() {
     const all = await getAllRecordings();
     setRecordings(all);
+  }
+
+  function confirmDelete(item: Recording) {
+    Alert.alert(
+      'Elimina registrazione',
+      `Sei sicuro di voler eliminare "${item.title}"? Questa azione non può essere annullata.`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRecordingFully(item);
+              await loadRecordings();
+            } catch (err) {
+              Alert.alert('Errore', `Impossibile eliminare: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function checkDanglingSession() {
@@ -130,6 +153,7 @@ export default function HomeScreen() {
               recording={item}
               isLast={index === filtered.length - 1}
               onPress={() => router.push(`/recording/${item.id}`)}
+              onLongPress={() => confirmDelete(item)}
             />
           )}
           ListHeaderComponent={
