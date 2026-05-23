@@ -1,27 +1,11 @@
 'use client';
 
-const KEY_STORAGE = 'recy_api_key';
-
-export function getApiKey(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(KEY_STORAGE);
-}
-
-export function setApiKey(value: string) {
-  window.localStorage.setItem(KEY_STORAGE, value);
-}
-
-export function clearApiKey() {
-  window.localStorage.removeItem(KEY_STORAGE);
-}
-
 async function apiFetch(path: string, options?: RequestInit) {
-  const apiKey = getApiKey();
   const res = await fetch(path, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(apiKey ? { 'x-api-key': apiKey } : {}),
       ...options?.headers,
     },
   });
@@ -117,13 +101,4 @@ export async function createRecording(data: {
   });
   if (!r.ok) throw new Error(`${r.status}`);
   return r.json() as Promise<{ id: string }>;
-}
-
-export async function ping(): Promise<boolean> {
-  try {
-    const r = await apiFetch('/api/recordings');
-    return r.ok;
-  } catch {
-    return false;
-  }
 }

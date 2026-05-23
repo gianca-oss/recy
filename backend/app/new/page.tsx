@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getApiKey, getPresignedUploadUrl, createRecording } from '../lib/webApi';
+import { getPresignedUploadUrl, createRecording } from '../lib/webApi';
 
 type RecState = 'idle' | 'recording' | 'paused' | 'stopped' | 'uploading';
 
@@ -20,10 +20,6 @@ export default function NewRecordingPage() {
   const blobRef = useRef<Blob | null>(null);
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (!getApiKey()) router.replace('/');
-  }, [router]);
 
   useEffect(() => {
     return () => {
