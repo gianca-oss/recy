@@ -26,13 +26,33 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadRecordings();
-      checkDanglingSession();
-      processQueue().catch(console.log);
-      reconcileServerIds()
-        .then((n) => { if (n > 0) loadRecordings(); })
-        .catch(console.log);
-      checkUsageWarning();
+      let pollTimer: ReturnType<typeof setInterval> | null = null;
+      let cancelled = false;
+
+      const runSync = async () => {
+        if (cancelled) return;
+        const touched = await reconcileServerIds().catch(() => 0);
+        if (touched > 0) await loadRecordings();
+      };
+
+      (async () => {
+        await loadRecordings();
+        checkDanglingSession();
+        processQueue().catch(console.log);
+        await runSync();
+        checkUsageWarning();
+
+        // If any recording is currently transcribing, poll every 4s.
+        const all = await getAllRecordings();
+        if (all.some((r) => r.status === 'transcribing')) {
+          pollTimer = setInterval(runSync, 4000);
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+        if (pollTimer) clearInterval(pollTimer);
+      };
     }, [])
   );
 

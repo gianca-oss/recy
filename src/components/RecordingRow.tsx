@@ -91,10 +91,24 @@ export default function RecordingRow({ recording, onPress, onLongPress, isLast, 
           <Text style={styles.subtitle} numberOfLines={1}>{recording.subject}</Text>
         ) : null}
         <View style={styles.metaRow}>
-          <Ionicons name={sync.name} size={13} color={sync.color} />
-          <Text style={styles.meta}>
-            {formatDuration(recording.durationSeconds)} · {formatDate(recording.recordedAt)}
-          </Text>
+          {recording.status === 'transcribing' ? (
+            <>
+              <View style={styles.transcribingDot} />
+              <Text style={[styles.meta, { color: Colors.accent }]}>Trascrizione in corso…</Text>
+            </>
+          ) : recording.status === 'failed' ? (
+            <>
+              <Ionicons name="alert-circle" size={14} color="#DC2626" />
+              <Text style={[styles.meta, { color: '#DC2626' }]}>Trascrizione fallita</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name={sync.name} size={13} color={sync.color} />
+              <Text style={styles.meta}>
+                {formatDuration(recording.durationSeconds)} · {formatDate(recording.recordedAt)}
+              </Text>
+            </>
+          )}
         </View>
       </View>
 
@@ -153,6 +167,9 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     marginTop: 2,
     lineHeight: 19,
+  },
+  transcribingDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent,
   },
   snippetMatch: {
     backgroundColor: '#FEF3C7',
