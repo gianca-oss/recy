@@ -17,16 +17,7 @@ export async function GET() {
         estimatedValue
         projectId
       }
-      workspace {
-        id
-        name
-        team {
-          id
-          name
-        }
-      }
       apiToken {
-        name
         workspaces { id name }
       }
     }
