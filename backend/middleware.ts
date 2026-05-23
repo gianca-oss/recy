@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/api/_debug/")) {
+    return NextResponse.next();
+  }
   const expected = process.env.API_KEY;
   if (!expected) return NextResponse.next();
 
