@@ -52,9 +52,10 @@ export default function RootLayout({
             borderRadius: 10,
             border: "1px solid #E4E4E7",
           },
-          footer: { background: "transparent" },
+          footer: { background: "transparent", display: "none" },
           footerAction: { background: "transparent" },
           badge: { background: "#F4F4F5", color: "#71717A" },
+          logoBox: { display: "none" },
         },
       }}
     >
