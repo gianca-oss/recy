@@ -129,7 +129,7 @@ export default function HomeScreen() {
             <RecordingRow
               recording={item}
               isLast={index === filtered.length - 1}
-              onPress={() => {}}
+              onPress={() => router.push(`/recording/${item.id}`)}
             />
           )}
           ListHeaderComponent={

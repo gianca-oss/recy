@@ -10,6 +10,7 @@ export type SyncState = 'local_only' | 'uploaded' | 'transcribed' | 'summarized'
 
 export interface Recording {
   id: string;
+  serverId?: string | null;
   title: string;
   subject: string | null;
   recordedAt: string;
@@ -19,6 +20,7 @@ export interface Recording {
   bookmarks: Bookmark[];
   status: RecordingStatus;
   syncState: SyncState;
+  transcript?: string | null;
   createdAt: string;
   updatedAt: string;
 }

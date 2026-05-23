@@ -118,7 +118,7 @@ async function processItem(item: QueueItem): Promise<void> {
   const local = recordings.find((r) => r.id === item.recordingId);
   if (!local) return;
 
-  await createRecording({
+  const serverRecording = await createRecording({
     title: local.title,
     subject: local.subject,
     recordedAt: local.recordedAt,
@@ -131,6 +131,7 @@ async function processItem(item: QueueItem): Promise<void> {
 
   await updateLocalRecording(item.recordingId, {
     syncState: 'uploaded',
+    serverId: serverRecording.id,
   });
   notify();
 }

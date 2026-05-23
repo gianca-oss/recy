@@ -71,6 +71,21 @@ export async function updateRecording(id: string, data: Record<string, unknown>)
   return res.json();
 }
 
+export async function getRecording(id: string) {
+  const res = await apiFetch(`/api/recordings/${id}`);
+  if (!res.ok) throw new Error(`Fetch recording failed: ${res.status}`);
+  return res.json();
+}
+
+export async function transcribeRecording(id: string) {
+  const res = await apiFetch(`/api/recordings/${id}/transcribe`, { method: 'POST' });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Transcribe failed: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
 export async function deleteRecording(id: string) {
   const res = await apiFetch(`/api/recordings/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Delete recording failed: ${res.status}`);
