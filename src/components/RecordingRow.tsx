@@ -42,6 +42,7 @@ interface Props {
   isLast: boolean;
   snippet?: string;
   snippetQuery?: string;
+  selected?: boolean;
 }
 
 function HighlightedSnippet({ text, query }: { text: string; query: string }) {
@@ -63,7 +64,7 @@ function HighlightedSnippet({ text, query }: { text: string; query: string }) {
   );
 }
 
-export default function RecordingRow({ recording, onPress, onLongPress, isLast, snippet, snippetQuery }: Props) {
+export default function RecordingRow({ recording, onPress, onLongPress, isLast, snippet, snippetQuery, selected }: Props) {
   const subjectColor = getSubjectColor(recording.subject);
   const sync = SyncIcons[recording.syncState];
 
@@ -73,15 +74,21 @@ export default function RecordingRow({ recording, onPress, onLongPress, isLast, 
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={400}
-      style={[styles.row, !isLast && styles.rowBorder]}
+      style={[styles.row, !isLast && styles.rowBorder, selected && styles.rowSelected]}
     >
-      <View style={[styles.iconTile, { backgroundColor: subjectColor + '1a' }]}>
-        <Ionicons
-          name={recording.source === 'import' ? 'document-outline' : 'mic-outline'}
-          size={17}
-          color={subjectColor}
-        />
-      </View>
+      {selected !== undefined ? (
+        <View style={[styles.selectCircle, selected && styles.selectCircleOn]}>
+          {selected && <Ionicons name="checkmark" size={16} color={Colors.white} />}
+        </View>
+      ) : (
+        <View style={[styles.iconTile, { backgroundColor: subjectColor + '1a' }]}>
+          <Ionicons
+            name={recording.source === 'import' ? 'document-outline' : 'mic-outline'}
+            size={17}
+            color={subjectColor}
+          />
+        </View>
+      )}
 
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>{recording.title}</Text>
@@ -175,6 +182,18 @@ const styles = StyleSheet.create({
   },
   transcribingDot: {
     width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent,
+  },
+  rowSelected: {
+    backgroundColor: Colors.accentDim,
+  },
+  selectCircle: {
+    width: 26, height: 26, borderRadius: 13,
+    borderWidth: 1.5, borderColor: Colors.tertiary,
+    backgroundColor: 'transparent',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  selectCircleOn: {
+    backgroundColor: Colors.accent, borderColor: Colors.accent,
   },
   snippetMatch: {
     backgroundColor: '#FEF3C7',

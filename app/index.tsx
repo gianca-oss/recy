@@ -23,6 +23,8 @@ export default function HomeScreen() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [usageWarning, setUsageWarning] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectMode = selectedIds.size > 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -99,21 +101,45 @@ export default function HomeScreen() {
     setRecordings(all);
   }
 
-  function confirmDelete(item: Recording) {
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectedIds(new Set());
+  }
+
+  function confirmBulkDelete() {
+    const count = selectedIds.size;
+    if (count === 0) return;
     Alert.alert(
-      'Elimina registrazione',
-      `Sei sicuro di voler eliminare "${item.title}"? Questa azione non può essere annullata.`,
+      count === 1 ? 'Elimina registrazione' : `Elimina ${count} registrazioni`,
+      `Sei sicuro di voler eliminare ${count === 1 ? 'questa registrazione' : `${count} registrazioni`}? L'azione non può essere annullata.`,
       [
         { text: 'Annulla', style: 'cancel' },
         {
           text: 'Elimina',
           style: 'destructive',
           onPress: async () => {
-            try {
-              await deleteRecordingFully(item);
-              await loadRecordings();
-            } catch (err) {
-              Alert.alert('Errore', `Impossibile eliminare: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+            const idsToDelete = Array.from(selectedIds);
+            const items = recordings.filter((r) => idsToDelete.includes(r.id));
+            const errors: string[] = [];
+            for (const item of items) {
+              try {
+                await deleteRecordingFully(item);
+              } catch (err) {
+                errors.push(item.title);
+                console.error('Bulk delete failed for', item.id, err);
+              }
+            }
+            exitSelectMode();
+            await loadRecordings();
+            if (errors.length > 0) {
+              Alert.alert('Alcune eliminazioni fallite', errors.join('\n'));
             }
           },
         },
@@ -164,26 +190,40 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Recy</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push('/settings')}
-            activeOpacity={0.5}
-            hitSlop={6}
-          >
-            <Ionicons name="stats-chart" size={22} color={Colors.accent} />
-            {usageWarning && <View style={styles.warningDot} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push('/import')}
-            activeOpacity={0.5}
-            hitSlop={6}
-          >
-            <Ionicons name="add" size={32} color={Colors.accent} />
-          </TouchableOpacity>
-        </View>
+        {selectMode ? (
+          <>
+            <TouchableOpacity onPress={exitSelectMode} hitSlop={8}>
+              <Text style={styles.selectActionText}>Annulla</Text>
+            </TouchableOpacity>
+            <Text style={styles.selectCount}>{selectedIds.size} selezionate</Text>
+            <TouchableOpacity onPress={confirmBulkDelete} hitSlop={8}>
+              <Text style={[styles.selectActionText, { color: '#DC2626' }]}>Elimina</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.headerTitle}>Recy</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.push('/settings')}
+                activeOpacity={0.5}
+                hitSlop={6}
+              >
+                <Ionicons name="stats-chart" size={22} color={Colors.accent} />
+                {usageWarning && <View style={styles.warningDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.push('/import')}
+                activeOpacity={0.5}
+                hitSlop={6}
+              >
+                <Ionicons name="add" size={32} color={Colors.accent} />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.searchContainer}>
@@ -231,8 +271,14 @@ export default function HomeScreen() {
               <RecordingRow
                 recording={item}
                 isLast={index === filtered.length - 1}
-                onPress={() => router.push(target)}
-                onLongPress={() => confirmDelete(item)}
+                onPress={() => {
+                  if (selectMode) toggleSelected(item.id);
+                  else router.push(target);
+                }}
+                onLongPress={() => {
+                  if (!selectMode) toggleSelected(item.id);
+                }}
+                selected={selectMode ? selectedIds.has(item.id) : undefined}
                 snippet={match?.field === 'transcript' ? match.snippet : undefined}
                 snippetQuery={match?.field === 'transcript' ? searchQuery.trim() : undefined}
               />
@@ -280,6 +326,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerActions: { flexDirection: 'row', gap: 4, marginRight: -8 },
+  selectActionText: { fontSize: 18, color: Colors.accent, fontWeight: '500' },
+  selectCount: { fontSize: 17, color: Colors.label, fontWeight: '600' },
   warningDot: {
     position: 'absolute',
     top: 6,
