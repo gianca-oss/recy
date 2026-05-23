@@ -29,8 +29,8 @@ Una riga che descriva l'argomento della lezione.
 Se mancano contenuti per una sezione, ometti la sezione invece di scrivere "nessuno".`;
 
 export async function summarizeTranscript(text: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const apiKey = process.env.ANTHROPIC_API_KEY_EVO || process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY_EVO or ANTHROPIC_API_KEY not set");
 
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
 
