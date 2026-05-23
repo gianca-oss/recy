@@ -8,7 +8,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../../src/theme';
 import { getAllRecordings, updateRecording } from '../../src/stores/recordingStore';
-import { transcribeRecording, summarizeRecording, getRecording, updateRecording as updateRemoteRecording } from '../../src/services/api';
+import { transcribeRecording, summarizeRecording, getRecording, getRecordingAudioInfo, updateRecording as updateRemoteRecording } from '../../src/services/api';
 import { deleteRecordingFully } from '../../src/services/deleteRecording';
 import type { Recording } from '../../src/types';
 
@@ -18,6 +18,7 @@ export default function RecordingDetailScreen() {
   const [recording, setRecording] = useState<Recording | null>(null);
   const [transcribing, setTranscribing] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
+  const [progress, setProgress] = useState<{ elapsed: number; sizeBytes: number | null }>({ elapsed: 0, sizeBytes: null });
   const scrollRef = useRef<ScrollView>(null);
   const transcriptY = useRef(0);
   const scrolledRef = useRef(false);
@@ -114,6 +115,15 @@ export default function RecordingDetailScreen() {
       return;
     }
     setTranscribing(true);
+    setProgress({ elapsed: 0, sizeBytes: null });
+    const startedAt = Date.now();
+    const interval = setInterval(() => {
+      setProgress((p) => ({ ...p, elapsed: Math.floor((Date.now() - startedAt) / 1000) }));
+    }, 1000);
+    // try to fetch the audio size in background
+    getRecordingAudioInfo(recording.serverId)
+      .then((info) => setProgress((p) => ({ ...p, sizeBytes: info.size })))
+      .catch(() => {});
     try {
       const result = await transcribeRecording(recording.serverId);
       await updateRecording(recording.id, {
@@ -128,6 +138,7 @@ export default function RecordingDetailScreen() {
       console.error('Transcribe error', err);
       Alert.alert('Errore', `Trascrizione fallita: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
     } finally {
+      clearInterval(interval);
       setTranscribing(false);
     }
   }
@@ -272,25 +283,23 @@ export default function RecordingDetailScreen() {
             </View>
           </View>
 
-          {canTranscribe && (
+          {canTranscribe && !transcribing && (
             <TouchableOpacity
-              style={[styles.actionButton, transcribing && { opacity: 0.6 }]}
+              style={styles.actionButton}
               onPress={handleTranscribe}
-              disabled={transcribing}
               activeOpacity={0.8}
             >
-              {transcribing ? (
-                <>
-                  <ActivityIndicator color={Colors.white} size="small" />
-                  <Text style={styles.actionButtonText}>Trascrizione in corso…</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="document-text-outline" size={18} color={Colors.white} />
-                  <Text style={styles.actionButtonText}>Trascrivi</Text>
-                </>
-              )}
+              <Ionicons name="document-text-outline" size={18} color={Colors.white} />
+              <Text style={styles.actionButtonText}>Trascrivi</Text>
             </TouchableOpacity>
+          )}
+
+          {transcribing && (
+            <TranscribeProgressCard
+              elapsed={progress.elapsed}
+              sizeBytes={progress.sizeBytes}
+              durationSeconds={recording.durationSeconds}
+            />
           )}
 
           {displayedTranscript !== null && (
@@ -393,6 +402,82 @@ export default function RecordingDetailScreen() {
   );
 }
 
+function formatSeconds(s: number): string {
+  const m = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+}
+
+function estimateAudioSeconds(sizeBytes: number | null, durationSeconds: number): number | null {
+  if (durationSeconds && durationSeconds > 0) return durationSeconds;
+  if (!sizeBytes) return null;
+  // Heuristic for m4a/aac ~96 kbps ≈ 12 kB/s → seconds = bytes / 12000
+  // Use a slightly conservative ratio.
+  return Math.floor(sizeBytes / 12000);
+}
+
+function TranscribeProgressCard({
+  elapsed,
+  sizeBytes,
+  durationSeconds,
+}: {
+  elapsed: number;
+  sizeBytes: number | null;
+  durationSeconds: number;
+}) {
+  const audioSec = estimateAudioSeconds(sizeBytes, durationSeconds);
+  // Scribe processa ~10x realtime; aggiungiamo overhead network/upload.
+  const etaSec = audioSec ? Math.max(15, Math.round(audioSec / 8) + 10) : null;
+  const remaining = etaSec ? Math.max(0, etaSec - elapsed) : null;
+  const pct = etaSec ? Math.min(99, Math.round((elapsed / etaSec) * 100)) : null;
+  const sizeMb = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(1) : null;
+  const audioMmss = audioSec ? formatSeconds(audioSec) : null;
+
+  return (
+    <View style={styles.progressCard}>
+      <View style={styles.progressHeader}>
+        <ActivityIndicator color={Colors.accent} size="small" />
+        <Text style={styles.progressTitle}>Trascrizione in corso</Text>
+      </View>
+
+      <View style={styles.progressMeta}>
+        <View style={styles.progressMetaItem}>
+          <Text style={styles.progressMetaLabel}>Trascorsi</Text>
+          <Text style={styles.progressMetaValue}>{formatSeconds(elapsed)}</Text>
+        </View>
+        {remaining !== null && (
+          <View style={styles.progressMetaItem}>
+            <Text style={styles.progressMetaLabel}>Stimato</Text>
+            <Text style={styles.progressMetaValue}>~{formatSeconds(remaining)}</Text>
+          </View>
+        )}
+        {sizeMb && (
+          <View style={styles.progressMetaItem}>
+            <Text style={styles.progressMetaLabel}>File</Text>
+            <Text style={styles.progressMetaValue}>{sizeMb} MB</Text>
+          </View>
+        )}
+        {audioMmss && (
+          <View style={styles.progressMetaItem}>
+            <Text style={styles.progressMetaLabel}>Durata audio</Text>
+            <Text style={styles.progressMetaValue}>{audioMmss}</Text>
+          </View>
+        )}
+      </View>
+
+      {pct !== null && (
+        <View style={styles.progressBarTrack}>
+          <View style={[styles.progressBarFill, { width: `${pct}%` }]} />
+        </View>
+      )}
+
+      <Text style={styles.progressNote}>
+        Puoi uscire da questa schermata. La trascrizione continua sul server e troverai il risultato qui.
+      </Text>
+    </View>
+  );
+}
+
 function HighlightedText({
   text,
   query,
@@ -450,6 +535,27 @@ const styles = StyleSheet.create({
   },
   actionButtonText: { color: Colors.white, fontSize: 18, fontWeight: '600' },
   summaryButton: { marginTop: 16, marginBottom: 0 },
+  progressCard: {
+    backgroundColor: Colors.card, borderRadius: 13, padding: 16,
+    marginBottom: 18, gap: 14,
+  },
+  progressHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  progressTitle: { fontSize: 17, fontWeight: '600', color: Colors.label },
+  progressMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 18 },
+  progressMetaItem: { gap: 2 },
+  progressMetaLabel: {
+    fontSize: 12, color: Colors.secondary, textTransform: 'uppercase',
+    letterSpacing: 0.3, fontWeight: '500',
+  },
+  progressMetaValue: {
+    fontSize: 18, color: Colors.label, fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  progressBarTrack: {
+    height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden',
+  },
+  progressBarFill: { height: '100%', backgroundColor: Colors.accent, borderRadius: 3 },
+  progressNote: { fontSize: 13, color: Colors.tertiary, lineHeight: 18, fontStyle: 'italic' },
   transcriptCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 14 },
   transcriptHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

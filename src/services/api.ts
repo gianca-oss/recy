@@ -77,6 +77,18 @@ export async function getRecording(id: string) {
   return res.json();
 }
 
+export async function getRecordingAudioInfo(id: string) {
+  const res = await apiFetch(`/api/recordings/${id}/audio`);
+  if (!res.ok) throw new Error(`Audio info failed: ${res.status}`);
+  return res.json() as Promise<{
+    key: string;
+    url: string;
+    size: number | null;
+    contentType: string | null;
+    lastModified: string | null;
+  }>;
+}
+
 export async function transcribeRecording(id: string) {
   const res = await apiFetch(`/api/recordings/${id}/transcribe`, { method: 'POST' });
   if (!res.ok) {
