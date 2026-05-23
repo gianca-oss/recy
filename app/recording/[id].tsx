@@ -484,7 +484,7 @@ export default function RecordingDetailScreen() {
             />
           )}
 
-          {displayedTranscript !== null && (recording.audioUri || recording.serverId) && (
+          {displayedTranscript !== null && (
             <AudioPlayerBar
               isLoading={audioLoading}
               isPlaying={isPlaying}
