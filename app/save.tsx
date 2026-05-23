@@ -11,7 +11,15 @@ import { clearSession } from '../src/stores/recordingSession';
 import { enqueueUpload } from '../src/services/uploadQueue';
 import type { Bookmark } from '../src/types';
 
-const SUBJECTS = ['Diritto', 'Matematica', 'Storia', 'Fisica', 'Filosofia', 'Informatica'];
+function defaultTitleFromDate(iso: string): string {
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}-${hh}${mi}-`;
+}
 
 export default function SaveScreen() {
   const router = useRouter();
@@ -24,11 +32,13 @@ export default function SaveScreen() {
     recordedAt: string;
   }>();
 
-  const [title, setTitle] = useState(params.title ?? 'Registrazione');
-  const [subject, setSubject] = useState<string | null>(
-    params.subject && params.subject.length > 0 ? params.subject : null
-  );
-  const [customSubject, setCustomSubject] = useState('');
+  const recordedAt = params.recordedAt ?? new Date().toISOString();
+  const initialTitle =
+    params.title && !params.title.startsWith('Lezione') && !params.title.startsWith('Registrazione')
+      ? params.title
+      : defaultTitleFromDate(recordedAt);
+
+  const [title, setTitle] = useState(initialTitle);
   const [saving, setSaving] = useState(false);
 
   const duration = parseInt(params.duration ?? '0', 10);
@@ -51,15 +61,13 @@ export default function SaveScreen() {
     setSaving(true);
 
     try {
-      const finalSubject = subject === '__custom__' ? customSubject.trim() || null : subject;
-
       const recording = createRecordingFromSession({
-        title: title.trim() || 'Registrazione',
-        subject: finalSubject,
+        title: title.trim() || defaultTitleFromDate(recordedAt),
+        subject: null,
         audioUri: params.audioUri,
         durationSeconds: duration,
         bookmarks,
-        recordedAt: params.recordedAt ?? new Date().toISOString(),
+        recordedAt,
       });
 
       await saveRecording(recording);
@@ -104,57 +112,7 @@ export default function SaveScreen() {
               placeholderTextColor={Colors.tertiary}
               autoFocus
               returnKeyType="done"
-              selectTextOnFocus
             />
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Materia</Text>
-            <View style={styles.subjectGrid}>
-              <TouchableOpacity
-                style={[styles.subjectChip, !subject && styles.subjectChipActive]}
-                onPress={() => setSubject(null)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.subjectChipText, !subject && styles.subjectChipTextActive]}>
-                  Nessuna
-                </Text>
-              </TouchableOpacity>
-
-              {SUBJECTS.map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[styles.subjectChip, subject === s && styles.subjectChipActive]}
-                  onPress={() => setSubject(s)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.subjectChipText, subject === s && styles.subjectChipTextActive]}>
-                    {s}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity
-                style={[styles.subjectChip, subject === '__custom__' && styles.subjectChipActive]}
-                onPress={() => setSubject('__custom__')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.subjectChipText, subject === '__custom__' && styles.subjectChipTextActive]}>
-                  Altra…
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {subject === '__custom__' && (
-              <TextInput
-                style={[styles.textInput, { marginTop: 10 }]}
-                value={customSubject}
-                onChangeText={setCustomSubject}
-                placeholder="Nome della materia"
-                placeholderTextColor={Colors.tertiary}
-                returnKeyType="done"
-              />
-            )}
           </View>
 
           <TouchableOpacity
@@ -186,14 +144,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
     borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontSize: 18, color: Colors.label,
   },
-  subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  subjectChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 9,
-    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
-  },
-  subjectChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  subjectChipText: { fontSize: 16, fontWeight: '500', color: Colors.label },
-  subjectChipTextActive: { color: Colors.white },
   saveButton: {
     backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: 13,
     alignItems: 'center', marginTop: 8,
