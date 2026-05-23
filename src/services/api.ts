@@ -86,6 +86,15 @@ export async function transcribeRecording(id: string) {
   return res.json();
 }
 
+export async function summarizeRecording(id: string) {
+  const res = await apiFetch(`/api/recordings/${id}/summarize`, { method: 'POST' });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Summarize failed: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
 export async function fetchUsageSummary() {
   const res = await apiFetch('/api/usage');
   if (!res.ok) throw new Error(`Usage failed: ${res.status}`);

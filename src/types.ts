@@ -31,6 +31,7 @@ export interface Recording {
   transcriptEdited?: string | null;
   transcriptSegments?: TranscriptSegment[] | null;
   transcriptFetchedAt?: string | null;
+  summary?: string | null;
   createdAt: string;
   updatedAt: string;
 }

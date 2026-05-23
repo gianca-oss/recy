@@ -8,7 +8,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../../src/theme';
 import { getAllRecordings, updateRecording } from '../../src/stores/recordingStore';
-import { transcribeRecording, getRecording, updateRecording as updateRemoteRecording } from '../../src/services/api';
+import { transcribeRecording, summarizeRecording, getRecording, updateRecording as updateRemoteRecording } from '../../src/services/api';
 import { deleteRecordingFully } from '../../src/services/deleteRecording';
 import type { Recording } from '../../src/types';
 
@@ -17,6 +17,7 @@ export default function RecordingDetailScreen() {
   const { id, q } = useLocalSearchParams<{ id: string; q?: string }>();
   const [recording, setRecording] = useState<Recording | null>(null);
   const [transcribing, setTranscribing] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const transcriptY = useRef(0);
   const scrolledRef = useRef(false);
@@ -44,6 +45,7 @@ export default function RecordingDetailScreen() {
         transcript: server.transcriptVerbatim ?? rec.transcript ?? null,
         transcriptEdited: server.transcriptEdited ?? rec.transcriptEdited ?? null,
         transcriptSegments: server.transcriptSegments ?? rec.transcriptSegments ?? null,
+        summary: server.summary ?? rec.summary ?? null,
         transcriptFetchedAt: new Date().toISOString(),
       };
       if (server.title && server.title !== rec.title) patch.title = server.title;
@@ -83,6 +85,27 @@ export default function RecordingDetailScreen() {
         },
       ]
     );
+  }
+
+  async function handleSummarize() {
+    if (!recording?.serverId) {
+      Alert.alert('Impossibile riassumere', 'La registrazione non è ancora sul cloud.');
+      return;
+    }
+    setSummarizing(true);
+    try {
+      const result = await summarizeRecording(recording.serverId);
+      await updateRecording(recording.id, {
+        summary: result.summary,
+        syncState: 'summarized',
+      });
+      await load();
+    } catch (err) {
+      console.error('Summarize error', err);
+      Alert.alert('Errore', `Riassunto fallito: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+    } finally {
+      setSummarizing(false);
+    }
   }
 
   async function handleTranscribe() {
@@ -180,6 +203,7 @@ export default function RecordingDetailScreen() {
 
   const displayedTranscript = recording.transcriptEdited ?? recording.transcript ?? null;
   const canTranscribe = recording.syncState === 'uploaded' && !displayedTranscript;
+  const canSummarize = !!displayedTranscript && !recording.summary && !!recording.serverId;
   const hasEdits = recording.transcriptEdited && recording.transcriptEdited !== recording.transcript;
   const highlight = typeof q === 'string' && q.length > 0 ? q : null;
 
@@ -327,6 +351,34 @@ export default function RecordingDetailScreen() {
             </View>
           )}
 
+          {canSummarize && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.summaryButton, summarizing && { opacity: 0.6 }]}
+              onPress={handleSummarize}
+              disabled={summarizing}
+              activeOpacity={0.8}
+            >
+              {summarizing ? (
+                <>
+                  <ActivityIndicator color={Colors.white} size="small" />
+                  <Text style={styles.actionButtonText}>Riassunto in corso…</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="sparkles-outline" size={18} color={Colors.white} />
+                  <Text style={styles.actionButtonText}>Genera riassunto</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {recording.summary && (
+            <View style={[styles.transcriptCard, { marginTop: 16 }]}>
+              <Text style={styles.sectionLabel}>Riassunto</Text>
+              <Text style={styles.transcriptText} selectable>{recording.summary}</Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDelete}
@@ -397,6 +449,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   actionButtonText: { color: Colors.white, fontSize: 18, fontWeight: '600' },
+  summaryButton: { marginTop: 16, marginBottom: 0 },
   transcriptCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 14 },
   transcriptHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
