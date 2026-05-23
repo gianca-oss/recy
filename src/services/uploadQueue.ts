@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { getPresignedUploadUrl, createRecording } from './api';
 import { updateRecording as updateLocalRecording, getAllRecordings } from '../stores/recordingStore';
 import type { Recording } from '../types';
@@ -17,6 +17,19 @@ interface QueueItem {
 }
 
 let processing = false;
+let pendingRerun = false;
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+export function subscribeToUploadQueue(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function notify() {
+  listeners.forEach((l) => l());
+}
 
 export async function enqueueUpload(recording: Recording): Promise<void> {
   const queue = await getQueue();
@@ -34,7 +47,10 @@ export async function enqueueUpload(recording: Recording): Promise<void> {
 }
 
 export async function processQueue(): Promise<void> {
-  if (processing) return;
+  if (processing) {
+    pendingRerun = true;
+    return;
+  }
   processing = true;
 
   try {
@@ -59,7 +75,13 @@ export async function processQueue(): Promise<void> {
       }
     }
 
-    await saveQueue(remaining);
+    const processedIds = new Set(queue.map((i) => i.recordingId));
+    const queueNow = await getQueue();
+    const newlyAdded = queueNow.filter((i) => !processedIds.has(i.recordingId));
+    const finalQueue = [...remaining, ...newlyAdded];
+    await saveQueue(finalQueue);
+
+    if (newlyAdded.length > 0) pendingRerun = true;
 
     if (remaining.length > 0) {
       const delay = Math.min(
@@ -70,6 +92,10 @@ export async function processQueue(): Promise<void> {
     }
   } finally {
     processing = false;
+    if (pendingRerun) {
+      pendingRerun = false;
+      processQueue();
+    }
   }
 }
 
@@ -106,6 +132,7 @@ async function processItem(item: QueueItem): Promise<void> {
   await updateLocalRecording(item.recordingId, {
     syncState: 'uploaded',
   });
+  notify();
 }
 
 async function getQueue(): Promise<QueueItem[]> {

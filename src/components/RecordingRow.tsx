@@ -5,9 +5,9 @@ import { Colors, getSubjectColor, Fonts } from '../theme';
 import type { Recording, SyncState } from '../types';
 
 const SyncIcons: Record<SyncState, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  local_only: { name: 'phone-portrait-outline', color: '#9CA3AF' },
-  uploaded: { name: 'cloud-outline', color: '#6B7280' },
-  transcribed: { name: 'checkmark-circle-outline', color: '#3F3F46' },
+  local_only: { name: 'cloud-offline-outline', color: '#F59E0B' },
+  uploaded: { name: 'cloud-done-outline', color: '#10B981' },
+  transcribed: { name: 'checkmark-circle', color: '#10B981' },
   summarized: { name: 'sparkles', color: '#18181B' },
 };
 
@@ -65,7 +65,7 @@ export default function RecordingRow({ recording, onPress, isLast }: Props) {
           <Text style={styles.subtitle} numberOfLines={1}>{recording.subject}</Text>
         )}
         <View style={styles.metaRow}>
-          <Ionicons name={sync.name} size={11} color={sync.color} />
+          <Ionicons name={sync.name} size={13} color={sync.color} />
           <Text style={styles.meta}>
             {formatDuration(recording.durationSeconds)} · {formatDate(recording.recordedAt)}
           </Text>

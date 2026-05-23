@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../src/theme';
 import { getAllRecordings } from '../src/stores/recordingStore';
 import { loadDanglingSession, clearSession } from '../src/stores/recordingSession';
-import { processQueue } from '../src/services/uploadQueue';
+import { processQueue, subscribeToUploadQueue } from '../src/services/uploadQueue';
 import RecordingRow from '../src/components/RecordingRow';
 import type { Recording } from '../src/types';
 
@@ -24,6 +24,11 @@ export default function HomeScreen() {
       processQueue().catch(console.log);
     }, [])
   );
+
+  useEffect(() => {
+    const unsubscribe = subscribeToUploadQueue(() => loadRecordings());
+    return unsubscribe;
+  }, []);
 
   async function loadRecordings() {
     const all = await getAllRecordings();
