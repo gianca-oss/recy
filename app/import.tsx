@@ -17,8 +17,6 @@ const ACCEPTED_TYPES = [
   'video/mp4', 'video/quicktime', 'video/webm',
 ];
 
-const SUBJECTS = ['Diritto', 'Matematica', 'Storia', 'Fisica', 'Filosofia', 'Informatica'];
-
 interface PickedFile {
   uri: string;
   name: string;
@@ -26,12 +24,20 @@ interface PickedFile {
   mimeType: string | null;
 }
 
+function defaultTitleFromDate(iso: string): string {
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}-${hh}${mi}-`;
+}
+
 export default function ImportScreen() {
   const router = useRouter();
   const [file, setFile] = useState<PickedFile | null>(null);
   const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState<string | null>(null);
-  const [customSubject, setCustomSubject] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function pickFile() {
@@ -58,8 +64,7 @@ export default function ImportScreen() {
         mimeType: asset.mimeType ?? null,
       });
 
-      const nameWithoutExt = asset.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
-      setTitle(nameWithoutExt);
+      setTitle(defaultTitleFromDate(new Date().toISOString()));
     } catch (err) {
       Alert.alert('Errore', 'Impossibile selezionare il file.');
       console.error('Document picker error:', err);
@@ -71,13 +76,13 @@ export default function ImportScreen() {
     setSaving(true);
 
     try {
-      const finalSubject = subject === '__custom__' ? customSubject.trim() || null : subject;
       const now = new Date().toISOString();
+      const finalTitle = title.trim() || defaultTitleFromDate(now);
 
       const recording: Recording = {
         id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        title: title.trim() || file.name,
-        subject: finalSubject,
+        title: finalTitle,
+        subject: null,
         recordedAt: now,
         durationSeconds: 0,
         audioUri: file.uri,
@@ -178,50 +183,8 @@ export default function ImportScreen() {
                   placeholder="Nome della registrazione"
                   placeholderTextColor={Colors.tertiary}
                   returnKeyType="done"
+                  autoFocus
                 />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Materia</Text>
-                <View style={styles.subjectGrid}>
-                  <TouchableOpacity
-                    style={[styles.chip, !subject && styles.chipActive]}
-                    onPress={() => setSubject(null)}
-                  >
-                    <Text style={[styles.chipText, !subject && styles.chipTextActive]}>
-                      Nessuna
-                    </Text>
-                  </TouchableOpacity>
-                  {SUBJECTS.map((s) => (
-                    <TouchableOpacity
-                      key={s}
-                      style={[styles.chip, subject === s && styles.chipActive]}
-                      onPress={() => setSubject(s)}
-                    >
-                      <Text style={[styles.chipText, subject === s && styles.chipTextActive]}>
-                        {s}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    style={[styles.chip, subject === '__custom__' && styles.chipActive]}
-                    onPress={() => setSubject('__custom__')}
-                  >
-                    <Text style={[styles.chipText, subject === '__custom__' && styles.chipTextActive]}>
-                      Altra…
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                {subject === '__custom__' && (
-                  <TextInput
-                    style={[styles.textInput, { marginTop: 10 }]}
-                    value={customSubject}
-                    onChangeText={setCustomSubject}
-                    placeholder="Nome della materia"
-                    placeholderTextColor={Colors.tertiary}
-                    returnKeyType="done"
-                  />
-                )}
               </View>
 
               <TouchableOpacity
@@ -274,11 +237,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep,
     borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontSize: 18, color: Colors.label,
   },
-  subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 9, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.sep },
-  chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  chipText: { fontSize: 16, fontWeight: '500', color: Colors.label },
-  chipTextActive: { color: Colors.white },
   importButton: {
     backgroundColor: Colors.accent, paddingVertical: 14, borderRadius: 13, alignItems: 'center', marginTop: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
