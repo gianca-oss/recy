@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   title: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '600',
     color: Colors.label,
     letterSpacing: -0.2,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 17,
     color: Colors.secondary,
     marginTop: 1,
   },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   meta: {
-    fontSize: 13.5,
+    fontSize: 15.5,
     color: Colors.secondary,
     fontWeight: '500',
   },

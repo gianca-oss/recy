@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...Fonts.title,
+    fontSize: 36,
     color: Colors.label,
   },
   searchContainer: {
@@ -291,12 +292,12 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 19,
     color: Colors.label,
     padding: 0,
   },
   sectionHeader: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
@@ -317,16 +318,16 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   emptyTitle: {
-    fontSize: 19,
+    fontSize: 21,
     fontWeight: '600',
     color: Colors.label,
     marginTop: 4,
   },
   emptySubtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.secondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
   },
   bottomBar: {
     position: 'absolute',
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   },
   recordButtonText: {
     color: Colors.white,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
 });
