@@ -67,13 +67,29 @@ export async function GET() {
     const map: Record<string, number> = {};
     for (const m of metrics) map[m.measurement] = m.value;
 
+    // Railway pricing (Hobby/Pro, as of 2025):
+    // CPU $0.027/vCPU-hour, RAM $0.0139/GB-hour,
+    // Egress $0.05/GB, Disk $0.15/GB/mo prorated
+    const cpu = map.CPU_USAGE ?? 0;
+    const mem = map.MEMORY_USAGE_GB ?? 0;
+    const egress = map.NETWORK_TX_GB ?? 0;
+    const disk = map.DISK_USAGE_GB ?? 0;
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const elapsedDays = (now.getTime() - startOfMonth.getTime()) / (1000 * 60 * 60 * 24);
+    const diskCost = disk * 0.15 * (elapsedDays / daysInMonth);
+
+    const estimatedCost =
+      cpu * 0.027 + mem * 0.0139 + egress * 0.05 + diskCost;
+
     return Response.json({
       periodStart: startOfMonth.toISOString(),
       periodEnd: now.toISOString(),
-      cpuHours: map.CPU_USAGE ?? null,
-      memoryGbHours: map.MEMORY_USAGE_GB ?? null,
-      networkEgressGb: map.NETWORK_TX_GB ?? null,
-      diskGb: map.DISK_USAGE_GB ?? null,
+      cpuHours: cpu,
+      memoryGbHours: mem,
+      networkEgressGb: egress,
+      diskGb: disk,
+      estimatedCostUsd: Number(estimatedCost.toFixed(2)),
     });
   } catch (err) {
     console.error("GET /api/usage/railway error:", err);

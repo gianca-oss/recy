@@ -30,6 +30,7 @@ interface RailwayUsage {
   memoryGbHours: number | null;
   networkEgressGb: number | null;
   diskGb: number | null;
+  estimatedCostUsd: number | null;
 }
 
 export default function SettingsScreen() {
@@ -165,12 +166,21 @@ function ElevenLabsCard({ usage }: { usage: ElevenLabsUsage }) {
 function RailwayCard({ usage }: { usage: RailwayUsage }) {
   const periodLabel = `${new Date(usage.periodStart).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → oggi`;
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 10 }}>
       <Row label="Periodo" value={periodLabel} />
+      {usage.estimatedCostUsd !== null && (
+        <View style={styles.costHighlight}>
+          <Text style={styles.costLabel}>Costo stimato (mese corrente)</Text>
+          <Text style={styles.costValue}>${usage.estimatedCostUsd.toFixed(2)}</Text>
+        </View>
+      )}
       <Row label="CPU ore" value={usage.cpuHours !== null ? usage.cpuHours.toFixed(2) : '—'} />
       <Row label="Memoria GB·ora" value={usage.memoryGbHours !== null ? usage.memoryGbHours.toFixed(2) : '—'} />
       <Row label="Traffico in uscita" value={usage.networkEgressGb !== null ? `${usage.networkEgressGb.toFixed(2)} GB` : '—'} />
       <Row label="Disco usato" value={usage.diskGb !== null ? `${usage.diskGb.toFixed(2)} GB` : '—'} />
+      <Text style={styles.disclaimer}>
+        Stima basata sui prezzi standard Railway. Il valore reale può variare. Consulta Railway → Settings → Usage per i dati ufficiali.
+      </Text>
     </View>
   );
 }
@@ -213,4 +223,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2', borderRadius: 8, padding: 10,
   },
   errorText: { fontSize: 12, color: '#DC2626', flex: 1, lineHeight: 16 },
+  costHighlight: {
+    backgroundColor: '#F3F4F6', borderRadius: 9, padding: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginVertical: 2,
+  },
+  costLabel: { fontSize: 13, color: Colors.secondary, fontWeight: '500', flex: 1 },
+  costValue: { fontSize: 18, color: Colors.label, fontWeight: '700' },
+  disclaimer: {
+    fontSize: 11, color: Colors.tertiary, lineHeight: 15, marginTop: 4, fontStyle: 'italic',
+  },
 });
