@@ -163,16 +163,26 @@ export default function RecordingDetailScreen() {
 
   async function ensureAudioLoaded(): Promise<Audio.Sound | null> {
     if (soundRef.current) return soundRef.current;
-    if (!recording?.serverId) return null;
+    if (!recording) return null;
     setAudioLoading(true);
     try {
-      const info = await getRecordingAudioInfo(recording.serverId);
+      let uri: string | null = null;
+      // Prefer the local file when available
+      if (recording.audioUri) uri = recording.audioUri;
+      if (!uri && recording.serverId) {
+        const info = await getRecordingAudioInfo(recording.serverId);
+        uri = info.url;
+      }
+      if (!uri) {
+        Alert.alert('Audio non disponibile', 'Nessuna sorgente audio per questa registrazione.');
+        return null;
+      }
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
       });
       const { sound } = await Audio.Sound.createAsync(
-        { uri: info.url },
+        { uri },
         { shouldPlay: false }
       );
       sound.setOnPlaybackStatusUpdate((status) => {
@@ -474,7 +484,7 @@ export default function RecordingDetailScreen() {
             />
           )}
 
-          {displayedTranscript !== null && recording.serverId && (
+          {displayedTranscript !== null && (recording.audioUri || recording.serverId) && (
             <AudioPlayerBar
               isLoading={audioLoading}
               isPlaying={isPlaying}
@@ -778,7 +788,7 @@ function AudioInfoCard({
         {etaSec && (
           <View style={styles.progressMetaItem}>
             <Text style={styles.progressMetaLabel}>Tempo stimato</Text>
-            <Text style={styles.progressMetaValue}>~{formatSeconds(etaSec)}</Text>
+            <Text style={styles.progressMetaValue}>{formatSeconds(etaSec)}</Text>
           </View>
         )}
       </View>
@@ -818,7 +828,7 @@ function TranscribeProgressCard({
         {remaining !== null && (
           <View style={styles.progressMetaItem}>
             <Text style={styles.progressMetaLabel}>Stimato</Text>
-            <Text style={styles.progressMetaValue}>~{formatSeconds(remaining)}</Text>
+            <Text style={styles.progressMetaValue}>{formatSeconds(remaining)}</Text>
           </View>
         )}
         {sizeMb && (
