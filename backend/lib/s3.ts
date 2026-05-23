@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, ListObjectsV2Command, PutBucketCorsCommand, GetBucketCorsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let _s3: S3Client | null = null;
@@ -56,6 +56,33 @@ export async function getBucketUsage() {
     ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
   } while (ContinuationToken);
   return { totalBytes, count };
+}
+
+export async function configureCors() {
+  const command = new PutBucketCorsCommand({
+    Bucket: getBucket(),
+    CORSConfiguration: {
+      CORSRules: [
+        {
+          AllowedMethods: ["GET", "PUT", "HEAD"],
+          AllowedOrigins: ["*"],
+          AllowedHeaders: ["*"],
+          ExposeHeaders: ["ETag"],
+          MaxAgeSeconds: 3000,
+        },
+      ],
+    },
+  });
+  await getS3().send(command);
+}
+
+export async function getCors() {
+  try {
+    const res = await getS3().send(new GetBucketCorsCommand({ Bucket: getBucket() }));
+    return res.CORSRules ?? [];
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function deleteObject(key: string) {
