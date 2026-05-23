@@ -49,15 +49,14 @@ export default function HomeScreen() {
         }
       }
       if (railway.status === 'fulfilled') {
-        const { currentUsageUsd, remainingUsageCreditUsd } = railway.value;
+        const { currentUsageUsd, includedUsd } = railway.value;
         if (
           typeof currentUsageUsd === 'number' &&
-          typeof remainingUsageCreditUsd === 'number'
+          typeof includedUsd === 'number' &&
+          includedUsd > 0 &&
+          currentUsageUsd / includedUsd > USAGE_WARNING_THRESHOLD
         ) {
-          const total = currentUsageUsd + remainingUsageCreditUsd;
-          if (total > 0 && currentUsageUsd / total > USAGE_WARNING_THRESHOLD) {
-            warning = true;
-          }
+          warning = true;
         }
       }
       setUsageWarning(warning);

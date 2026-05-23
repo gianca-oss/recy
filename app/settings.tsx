@@ -32,8 +32,9 @@ interface RailwayUsage {
   networkEgressGb: number | null;
   diskGb: number | null;
   currentUsageUsd: number | null;
+  includedUsd: number | null;
+  remainingIncludedUsd: number | null;
   creditBalanceUsd: number | null;
-  remainingUsageCreditUsd: number | null;
   appliedCreditsUsd: number | null;
   hasExhaustedFreePlan: boolean | null;
   isTrialing: boolean | null;
@@ -183,14 +184,11 @@ function RailwayCard({ usage }: { usage: RailwayUsage }) {
     : `${startDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → oggi`;
 
   const currentUsage = usage.currentUsageUsd ?? 0;
-  const remaining = usage.remainingUsageCreditUsd;
+  const included = usage.includedUsd ?? 0;
+  const remaining = usage.remainingIncludedUsd ?? 0;
   const creditBalance = usage.creditBalanceUsd;
 
-  // Progress bar: if we have remaining credit, compute pct of original credit used.
-  const totalCredit = remaining !== null && remaining !== undefined
-    ? currentUsage + remaining
-    : null;
-  const pct = totalCredit && totalCredit > 0 ? Math.min(100, (currentUsage / totalCredit) * 100) : 0;
+  const pct = included > 0 ? Math.min(100, (currentUsage / included) * 100) : 0;
   const barColor = pct > 90 ? '#DC2626' : pct > 70 ? '#F59E0B' : '#10B981';
 
   return (
@@ -198,19 +196,19 @@ function RailwayCard({ usage }: { usage: RailwayUsage }) {
       {usage.plan && <Row label="Piano" value={String(usage.plan).toLowerCase()} />}
       <Row label="Periodo" value={periodLabel} />
 
-      {remaining !== null && remaining !== undefined && (
+      {included > 0 && (
         <View style={styles.costHighlight}>
-          <Text style={styles.costLabel}>Credito rimanente</Text>
+          <Text style={styles.costLabel}>Credito rimanente nel piano</Text>
           <Text style={styles.costValue}>${remaining.toFixed(2)}</Text>
         </View>
       )}
 
-      <Row label="Consumo periodo" value={`$${currentUsage.toFixed(2)}`} />
-      {creditBalance !== null && creditBalance !== undefined && (
+      <Row label="Consumo periodo" value={`$${currentUsage.toFixed(2)} / $${included.toFixed(2)}`} />
+      {creditBalance !== null && creditBalance !== undefined && creditBalance > 0 && (
         <Row label="Saldo crediti account" value={`$${creditBalance.toFixed(2)}`} />
       )}
 
-      {totalCredit !== null && (
+      {included > 0 && (
         <View style={styles.barTrack}>
           <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
         </View>

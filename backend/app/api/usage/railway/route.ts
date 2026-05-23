@@ -101,17 +101,27 @@ export async function GET() {
     const ws = json.data?.workspace;
     const customer = ws?.customer;
 
+    const plan: string | null = ws?.plan ?? null;
+    // Hobby plan includes $5/mo usage credit, Pro $20/mo, Free $0.
+    const includedUsd =
+      plan === 'PRO' ? 20 :
+      plan === 'HOBBY' ? 5 :
+      0;
+    const currentUsageUsd: number = customer?.currentUsage ?? 0;
+    const remainingIncludedUsd = Math.max(0, includedUsd - currentUsageUsd);
+
     return Response.json({
       periodStart: customer?.billingPeriod?.start ?? startOfMonth.toISOString(),
       periodEnd: customer?.billingPeriod?.end ?? null,
-      plan: ws?.plan ?? null,
+      plan,
       cpuHours: map.CPU_USAGE ?? null,
       memoryGbHours: map.MEMORY_USAGE_GB ?? null,
       networkEgressGb: map.NETWORK_TX_GB ?? null,
       diskGb: map.DISK_USAGE_GB ?? null,
-      currentUsageUsd: customer?.currentUsage ?? null,
+      currentUsageUsd,
+      includedUsd,
+      remainingIncludedUsd: Number(remainingIncludedUsd.toFixed(2)),
       creditBalanceUsd: customer?.creditBalance ?? null,
-      remainingUsageCreditUsd: customer?.remainingUsageCreditBalance ?? null,
       appliedCreditsUsd: customer?.appliedCredits ?? null,
       hasExhaustedFreePlan: customer?.hasExhaustedFreePlan ?? null,
       isTrialing: customer?.isTrialing ?? null,
