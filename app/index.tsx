@@ -11,13 +11,17 @@ import { loadDanglingSession, clearSession } from '../src/stores/recordingSessio
 import { processQueue, subscribeToUploadQueue } from '../src/services/uploadQueue';
 import { deleteRecordingFully } from '../src/services/deleteRecording';
 import { reconcileServerIds } from '../src/services/syncWithServer';
+import { fetchElevenLabsUsage, fetchRailwayUsage } from '../src/services/api';
 import RecordingRow from '../src/components/RecordingRow';
 import type { Recording } from '../src/types';
+
+const USAGE_WARNING_THRESHOLD = 0.8;
 
 export default function HomeScreen() {
   const router = useRouter();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [usageWarning, setUsageWarning] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -27,8 +31,39 @@ export default function HomeScreen() {
       reconcileServerIds()
         .then((n) => { if (n > 0) loadRecordings(); })
         .catch(console.log);
+      checkUsageWarning();
     }, [])
   );
+
+  async function checkUsageWarning() {
+    try {
+      const [eleven, railway] = await Promise.allSettled([
+        fetchElevenLabsUsage(),
+        fetchRailwayUsage(),
+      ]);
+      let warning = false;
+      if (eleven.status === 'fulfilled') {
+        const { characterCount, characterLimit } = eleven.value;
+        if (characterLimit > 0 && characterCount / characterLimit > USAGE_WARNING_THRESHOLD) {
+          warning = true;
+        }
+      }
+      if (railway.status === 'fulfilled') {
+        const { estimatedCostUsd, includedCreditUsd } = railway.value;
+        if (
+          typeof estimatedCostUsd === 'number' &&
+          typeof includedCreditUsd === 'number' &&
+          includedCreditUsd > 0 &&
+          estimatedCostUsd / includedCreditUsd > USAGE_WARNING_THRESHOLD
+        ) {
+          warning = true;
+        }
+      }
+      setUsageWarning(warning);
+    } catch {
+      // ignore - warning stays as-is
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = subscribeToUploadQueue(() => loadRecordings());
@@ -114,6 +149,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="stats-chart-outline" size={20} color={Colors.accent} />
+            {usageWarning && <View style={styles.warningDot} />}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
@@ -211,6 +247,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerActions: { flexDirection: 'row', gap: 8 },
+  warningDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#DC2626',
+    borderWidth: 1.5,
+    borderColor: Colors.card,
+  },
   iconButton: {
     width: 40,
     height: 40,
