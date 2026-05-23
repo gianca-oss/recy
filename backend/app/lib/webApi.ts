@@ -94,6 +94,31 @@ export async function deleteRecording(id: string) {
   return r.json();
 }
 
+export async function getPresignedUploadUrl(filename: string, contentType: string) {
+  const r = await apiFetch('/api/upload/presigned-url', {
+    method: 'POST',
+    body: JSON.stringify({ filename, contentType }),
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json() as Promise<{ url: string; key: string }>;
+}
+
+export async function createRecording(data: {
+  title: string;
+  recordedAt: string;
+  durationSeconds: number;
+  audioUrl: string | null;
+  source: 'recording' | 'import';
+  bookmarks?: unknown[];
+}) {
+  const r = await apiFetch('/api/recordings', {
+    method: 'POST',
+    body: JSON.stringify({ ...data, bookmarks: data.bookmarks ?? [] }),
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json() as Promise<{ id: string }>;
+}
+
 export async function ping(): Promise<boolean> {
   try {
     const r = await apiFetch('/api/recordings');

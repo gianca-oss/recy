@@ -94,6 +94,7 @@ export default function HomePage() {
           onChange={(e) => setQuery(e.target.value)}
           style={dashStyles.search}
         />
+        <Link href="/new" style={dashStyles.newButton}>+ Nuova</Link>
         <button
           style={dashStyles.logout}
           onClick={() => { clearApiKey(); setAuthed(false); }}
@@ -227,6 +228,14 @@ const dashStyles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     outline: 'none',
     background: 'var(--card)',
+  },
+  newButton: {
+    background: 'var(--accent)',
+    color: 'white',
+    padding: '10px 16px',
+    borderRadius: 10,
+    fontSize: 15,
+    fontWeight: 600,
   },
   logout: {
     background: 'transparent',
