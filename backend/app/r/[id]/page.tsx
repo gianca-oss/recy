@@ -95,6 +95,7 @@ export default function RecordingDetailPage() {
   }
 
   async function doDelete() {
+    if (!rec) return;
     if (!confirm(`Eliminare "${rec.title}"?`)) return;
     await deleteRecording(id);
     router.push('/');
