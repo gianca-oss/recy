@@ -140,16 +140,14 @@ export default function ImportScreen() {
                 onPress={pickFile}
                 activeOpacity={0.7}
               >
-                <View style={styles.pickIconCircle}>
-                  <Ionicons name="cloud-upload-outline" size={24} color={Colors.label} />
-                </View>
+                <Ionicons name="cloud-upload-outline" size={36} color={Colors.accent} />
                 <Text style={styles.pickTitle}>Scegli un file</Text>
                 <Text style={styles.pickSubtitle}>da File, iCloud o altre app</Text>
               </TouchableOpacity>
 
               <Text style={styles.sectionLabel}>Oppure condividi verso l'app</Text>
               <View style={styles.hintCard}>
-                <Ionicons name="document-outline" size={19} color={Colors.secondary} />
+                <Ionicons name="share-outline" size={20} color={Colors.secondary} />
                 <Text style={styles.hintText}>
                   Da Memo Vocali, WhatsApp, Mail… usa "Condividi" e scegli questa app.
                 </Text>
@@ -162,14 +160,12 @@ export default function ImportScreen() {
           ) : (
             <>
               <View style={styles.fileCard}>
-                <View style={styles.fileIconCircle}>
-                  <Ionicons name="document-outline" size={19} color={Colors.label} />
-                </View>
+                <Ionicons name="document-outline" size={22} color={Colors.accent} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
                   <Text style={styles.fileMeta}>{formatSize(file.size)}</Text>
                 </View>
-                <TouchableOpacity onPress={() => setFile(null)}>
+                <TouchableOpacity onPress={() => setFile(null)} hitSlop={8}>
                   <Ionicons name="close-circle" size={22} color={Colors.tertiary} />
                 </TouchableOpacity>
               </View>
@@ -215,10 +211,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16.5, color: Colors.secondary, lineHeight: 20, marginBottom: 18 },
   pickButton: {
     width: '100%', borderWidth: 1.5, borderStyle: 'dashed', borderColor: Colors.tertiary,
-    backgroundColor: Colors.card, borderRadius: 14, paddingVertical: 30, paddingHorizontal: 16, alignItems: 'center', gap: 10,
+    backgroundColor: Colors.card, borderRadius: 14, paddingVertical: 32, paddingHorizontal: 16, alignItems: 'center', gap: 12,
   },
-  pickIconCircle: { width: 52, height: 52, borderRadius: 14, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' },
-  pickTitle: { fontSize: 18, fontWeight: '600', color: Colors.label },
+  pickTitle: { fontSize: 18, fontWeight: '600', color: Colors.label, marginTop: 4 },
   pickSubtitle: { fontSize: 15, color: Colors.secondary },
   sectionLabel: {
     fontSize: 14, color: Colors.secondary, textTransform: 'uppercase', letterSpacing: 0.3,
@@ -227,8 +222,7 @@ const styles = StyleSheet.create({
   hintCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11 },
   hintText: { fontSize: 16, color: Colors.secondary, lineHeight: 19, flex: 1 },
   formatsText: { fontSize: 14, color: Colors.tertiary, textAlign: 'center', marginTop: 16 },
-  fileCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 18 },
-  fileIconCircle: { width: 40, height: 40, borderRadius: 10, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' },
+  fileCard: { backgroundColor: Colors.card, borderRadius: 13, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   fileName: { fontSize: 17, fontWeight: '600', color: Colors.label },
   fileMeta: { fontSize: 15, color: Colors.secondary, marginTop: 2 },
   fieldContainer: { marginBottom: 20 },
