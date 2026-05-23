@@ -46,6 +46,7 @@ export async function POST(
         status: true,
         syncState: true,
         transcriptVerbatim: true,
+        transcriptSegments: true,
       },
     });
 

@@ -12,6 +12,7 @@ import { processQueue, subscribeToUploadQueue } from '../src/services/uploadQueu
 import { deleteRecordingFully } from '../src/services/deleteRecording';
 import { reconcileServerIds } from '../src/services/syncWithServer';
 import { fetchElevenLabsUsage, fetchRailwayUsage } from '../src/services/api';
+import { searchRecordings, SearchMatch } from '../src/services/search';
 import RecordingRow from '../src/components/RecordingRow';
 import type { Recording } from '../src/types';
 
@@ -130,12 +131,11 @@ export default function HomeScreen() {
     );
   }
 
+  const searchResults: SearchMatch[] = searchQuery.trim()
+    ? searchRecordings(recordings, searchQuery)
+    : [];
   const filtered = searchQuery.trim()
-    ? recordings.filter(
-        (r) =>
-          r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (r.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-      )
+    ? searchResults.map((m) => m.recording)
     : recordings;
 
   return (
@@ -199,14 +199,22 @@ export default function HomeScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item, index }) => (
-            <RecordingRow
-              recording={item}
-              isLast={index === filtered.length - 1}
-              onPress={() => router.push(`/recording/${item.id}`)}
-              onLongPress={() => confirmDelete(item)}
-            />
-          )}
+          renderItem={({ item, index }) => {
+            const match = searchResults.find((m) => m.recording.id === item.id);
+            const target = match && match.field === 'transcript'
+              ? `/recording/${item.id}?q=${encodeURIComponent(searchQuery.trim())}`
+              : `/recording/${item.id}`;
+            return (
+              <RecordingRow
+                recording={item}
+                isLast={index === filtered.length - 1}
+                onPress={() => router.push(target)}
+                onLongPress={() => confirmDelete(item)}
+                snippet={match?.field === 'transcript' ? match.snippet : undefined}
+                snippetQuery={match?.field === 'transcript' ? searchQuery.trim() : undefined}
+              />
+            );
+          }}
           ListHeaderComponent={
             <Text style={styles.sectionHeader}>
               {searchQuery ? `${filtered.length} risultati` : 'Recenti'}

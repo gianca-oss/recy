@@ -40,9 +40,30 @@ interface Props {
   onPress: () => void;
   onLongPress?: () => void;
   isLast: boolean;
+  snippet?: string;
+  snippetQuery?: string;
 }
 
-export default function RecordingRow({ recording, onPress, onLongPress, isLast }: Props) {
+function HighlightedSnippet({ text, query }: { text: string; query: string }) {
+  const lc = text.toLowerCase();
+  const lcq = query.toLowerCase();
+  const idx = lc.indexOf(lcq);
+  if (idx < 0) {
+    return <Text style={styles.snippet} numberOfLines={2}>{text}</Text>;
+  }
+  const before = text.slice(0, idx);
+  const match = text.slice(idx, idx + query.length);
+  const after = text.slice(idx + query.length);
+  return (
+    <Text style={styles.snippet} numberOfLines={2}>
+      {before}
+      <Text style={styles.snippetMatch}>{match}</Text>
+      {after}
+    </Text>
+  );
+}
+
+export default function RecordingRow({ recording, onPress, onLongPress, isLast, snippet, snippetQuery }: Props) {
   const subjectColor = getSubjectColor(recording.subject);
   const sync = SyncIcons[recording.syncState];
 
@@ -64,9 +85,11 @@ export default function RecordingRow({ recording, onPress, onLongPress, isLast }
 
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>{recording.title}</Text>
-        {recording.subject && (
+        {snippet && snippetQuery ? (
+          <HighlightedSnippet text={snippet} query={snippetQuery} />
+        ) : recording.subject ? (
           <Text style={styles.subtitle} numberOfLines={1}>{recording.subject}</Text>
-        )}
+        ) : null}
         <View style={styles.metaRow}>
           <Ionicons name={sync.name} size={13} color={sync.color} />
           <Text style={styles.meta}>
@@ -124,5 +147,16 @@ const styles = StyleSheet.create({
     fontSize: 15.5,
     color: Colors.secondary,
     fontWeight: '500',
+  },
+  snippet: {
+    fontSize: 14,
+    color: Colors.secondary,
+    marginTop: 2,
+    lineHeight: 19,
+  },
+  snippetMatch: {
+    backgroundColor: '#FEF3C7',
+    color: Colors.label,
+    fontWeight: '600',
   },
 });

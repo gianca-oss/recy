@@ -4,6 +4,13 @@ export interface Bookmark {
   createdAt: string;
 }
 
+export interface TranscriptSegment {
+  text: string;
+  start: number;
+  end: number;
+  type?: string;
+}
+
 export type RecordingSource = 'recording' | 'import';
 export type RecordingStatus = 'recorded' | 'transcribing' | 'transcribed' | 'failed';
 export type SyncState = 'local_only' | 'uploaded' | 'transcribed' | 'summarized';
@@ -22,6 +29,7 @@ export interface Recording {
   syncState: SyncState;
   transcript?: string | null;
   transcriptEdited?: string | null;
+  transcriptSegments?: TranscriptSegment[] | null;
   transcriptFetchedAt?: string | null;
   createdAt: string;
   updatedAt: string;

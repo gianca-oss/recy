@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity, Alert,
   StyleSheet, SafeAreaView, ActivityIndicator,
@@ -14,9 +14,12 @@ import type { Recording } from '../../src/types';
 
 export default function RecordingDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, q } = useLocalSearchParams<{ id: string; q?: string }>();
   const [recording, setRecording] = useState<Recording | null>(null);
   const [transcribing, setTranscribing] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const transcriptY = useRef(0);
+  const scrolledRef = useRef(false);
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -40,6 +43,7 @@ export default function RecordingDetailScreen() {
       const patch: Partial<Recording> = {
         transcript: server.transcriptVerbatim ?? rec.transcript ?? null,
         transcriptEdited: server.transcriptEdited ?? rec.transcriptEdited ?? null,
+        transcriptSegments: server.transcriptSegments ?? rec.transcriptSegments ?? null,
         transcriptFetchedAt: new Date().toISOString(),
       };
       if (server.title && server.title !== rec.title) patch.title = server.title;
@@ -93,6 +97,7 @@ export default function RecordingDetailScreen() {
         status: 'transcribed',
         syncState: 'transcribed',
         transcript: result.transcriptVerbatim,
+        transcriptSegments: result.transcriptSegments ?? null,
         transcriptFetchedAt: new Date().toISOString(),
       });
       await load();
@@ -176,6 +181,7 @@ export default function RecordingDetailScreen() {
   const displayedTranscript = recording.transcriptEdited ?? recording.transcript ?? null;
   const canTranscribe = recording.syncState === 'uploaded' && !displayedTranscript;
   const hasEdits = recording.transcriptEdited && recording.transcriptEdited !== recording.transcript;
+  const highlight = typeof q === 'string' && q.length > 0 ? q : null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -190,7 +196,11 @@ export default function RecordingDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
           {editingTitle ? (
             <View style={styles.titleEditRow}>
               <TextInput
@@ -260,7 +270,18 @@ export default function RecordingDetailScreen() {
           )}
 
           {displayedTranscript !== null && (
-            <View style={styles.transcriptCard}>
+            <View
+              style={styles.transcriptCard}
+              onLayout={(e) => {
+                transcriptY.current = e.nativeEvent.layout.y;
+                if (highlight && !scrolledRef.current) {
+                  scrolledRef.current = true;
+                  setTimeout(() => {
+                    scrollRef.current?.scrollTo({ y: transcriptY.current - 12, animated: true });
+                  }, 150);
+                }
+              }}
+            >
               <Text style={styles.sectionLabel}>
                 Trascrizione{hasEdits ? ' · modificata' : ''}
               </Text>
@@ -296,7 +317,11 @@ export default function RecordingDetailScreen() {
                 </>
               ) : (
                 <TouchableOpacity onPress={startEditTranscript} activeOpacity={0.6}>
-                  <Text style={styles.transcriptText} selectable>{displayedTranscript}</Text>
+                  <HighlightedText
+                    text={displayedTranscript}
+                    query={highlight}
+                    style={styles.transcriptText}
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -314,6 +339,36 @@ export default function RecordingDetailScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function HighlightedText({
+  text,
+  query,
+  style,
+}: {
+  text: string;
+  query: string | null;
+  style: object;
+}) {
+  if (!query) return <Text style={style} selectable>{text}</Text>;
+  const lcq = query.toLowerCase();
+  const lc = text.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  let idx = lc.indexOf(lcq, cursor);
+  let key = 0;
+  while (idx >= 0) {
+    if (idx > cursor) parts.push(<Text key={key++}>{text.slice(cursor, idx)}</Text>);
+    parts.push(
+      <Text key={key++} style={styles.highlightMatch}>
+        {text.slice(idx, idx + query.length)}
+      </Text>
+    );
+    cursor = idx + query.length;
+    idx = lc.indexOf(lcq, cursor);
+  }
+  if (cursor < text.length) parts.push(<Text key={key++}>{text.slice(cursor)}</Text>);
+  return <Text style={style} selectable>{parts}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -352,6 +407,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3, fontWeight: '500',
   },
   transcriptText: { fontSize: 17, color: Colors.label, lineHeight: 24 },
+  highlightMatch: { backgroundColor: '#FEF3C7', fontWeight: '600' },
   transcriptInput: {
     fontSize: 17, color: Colors.label, lineHeight: 24,
     minHeight: 200, padding: 0, paddingTop: 0,
