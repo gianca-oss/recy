@@ -129,6 +129,17 @@ export default function RecordingDetailScreen() {
     return () => clearInterval(tick);
   }, [summarizing, summarizationStartedAt]);
 
+  // Pre-fetch audio metadata so size + estimated duration are visible
+  // even before tapping Trascrivi.
+  useEffect(() => {
+    if (!recording?.serverId) return;
+    if (progress.sizeBytes !== null) return;
+    if (recording.syncState === 'local_only') return;
+    getRecordingAudioInfo(recording.serverId)
+      .then((info) => setProgress((p) => ({ ...p, sizeBytes: info.size })))
+      .catch(() => {});
+  }, [recording?.serverId, recording?.syncState, progress.sizeBytes]);
+
   function handleDelete() {
     if (!recording) return;
     Alert.alert(
@@ -345,14 +356,20 @@ export default function RecordingDetailScreen() {
           </View>
 
           {canTranscribe && !transcribing && (
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleTranscribe}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="document-text-outline" size={18} color={Colors.white} />
-              <Text style={styles.actionButtonText}>Trascrivi</Text>
-            </TouchableOpacity>
+            <>
+              <AudioInfoCard
+                sizeBytes={progress.sizeBytes}
+                durationSeconds={recording.durationSeconds}
+              />
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleTranscribe}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="document-text-outline" size={18} color={Colors.white} />
+                <Text style={styles.actionButtonText}>Trascrivi</Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {transcribing && (
@@ -517,6 +534,46 @@ function estimateAudioSeconds(sizeBytes: number | null, durationSeconds: number)
   // Heuristic for m4a/aac ~96 kbps ≈ 12 kB/s → seconds = bytes / 12000
   // Use a slightly conservative ratio.
   return Math.floor(sizeBytes / 12000);
+}
+
+function AudioInfoCard({
+  sizeBytes,
+  durationSeconds,
+}: {
+  sizeBytes: number | null;
+  durationSeconds: number;
+}) {
+  const audioSec = estimateAudioSeconds(sizeBytes, durationSeconds);
+  const etaSec = audioSec ? Math.max(15, Math.round(audioSec / 8) + 10) : null;
+  const sizeMb = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(1) : null;
+  const audioMmss = audioSec ? formatSeconds(audioSec) : null;
+
+  if (!sizeMb && !audioMmss && !etaSec) return null;
+
+  return (
+    <View style={[styles.progressCard, { marginBottom: 12 }]}>
+      <View style={styles.progressMeta}>
+        {sizeMb && (
+          <View style={styles.progressMetaItem}>
+            <Text style={styles.progressMetaLabel}>File</Text>
+            <Text style={styles.progressMetaValue}>{sizeMb} MB</Text>
+          </View>
+        )}
+        {audioMmss && (
+          <View style={styles.progressMetaItem}>
+            <Text style={styles.progressMetaLabel}>Durata audio</Text>
+            <Text style={styles.progressMetaValue}>{audioMmss}</Text>
+          </View>
+        )}
+        {etaSec && (
+          <View style={styles.progressMetaItem}>
+            <Text style={styles.progressMetaLabel}>Tempo stimato</Text>
+            <Text style={styles.progressMetaValue}>~{formatSeconds(etaSec)}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
 }
 
 function TranscribeProgressCard({
