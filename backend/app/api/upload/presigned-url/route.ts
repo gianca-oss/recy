@@ -22,6 +22,13 @@ export async function POST(request: NextRequest) {
     return Response.json({ url, key });
   } catch (err) {
     console.error("Presigned URL error:", err);
+    console.error("S3 env check:", {
+      endpoint: !!process.env.S3_ENDPOINT,
+      bucket: !!process.env.S3_BUCKET,
+      accessKey: !!process.env.S3_ACCESS_KEY,
+      secretKey: !!process.env.S3_SECRET_KEY,
+      region: process.env.S3_REGION,
+    });
     return Response.json(
       { error: "Failed to generate upload URL" },
       { status: 500 }
