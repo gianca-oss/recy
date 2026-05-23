@@ -30,11 +30,6 @@ export async function GET() {
         measurement
         value
       }
-      me {
-        id
-        email
-        has2FA
-      }
     }
   `;
 
