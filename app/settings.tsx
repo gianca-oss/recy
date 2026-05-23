@@ -23,14 +23,17 @@ interface ElevenLabsUsage {
   status: string;
 }
 
+interface RailwayBreakdownItem {
+  label: string;
+  units: number;
+  unitLabel: string;
+  costUsd: number;
+}
+
 interface RailwayUsage {
   periodStart: string;
   periodEnd: string | null;
   plan: string | null;
-  cpuHours: number | null;
-  memoryGbHours: number | null;
-  networkEgressGb: number | null;
-  diskGb: number | null;
   currentUsageUsd: number | null;
   includedUsd: number | null;
   remainingIncludedUsd: number | null;
@@ -39,6 +42,8 @@ interface RailwayUsage {
   hasExhaustedFreePlan: boolean | null;
   isTrialing: boolean | null;
   trialDaysRemaining: number | null;
+  breakdown: RailwayBreakdownItem[];
+  breakdownSubtotalUsd: number;
 }
 
 export default function SettingsScreen() {
@@ -220,10 +225,28 @@ function RailwayCard({ usage }: { usage: RailwayUsage }) {
         </Text>
       )}
 
-      <Row label="CPU ore" value={usage.cpuHours !== null ? usage.cpuHours.toFixed(2) : '—'} />
-      <Row label="Memoria GB·ora" value={usage.memoryGbHours !== null ? usage.memoryGbHours.toFixed(2) : '—'} />
-      <Row label="Traffico in uscita" value={usage.networkEgressGb !== null ? `${usage.networkEgressGb.toFixed(2)} GB` : '—'} />
-      <Row label="Disco usato" value={usage.diskGb !== null ? `${usage.diskGb.toFixed(2)} GB` : '—'} />
+      {usage.breakdown && usage.breakdown.length > 0 && (
+        <View style={styles.breakdownSection}>
+          <Text style={styles.breakdownTitle}>Dettaglio costi</Text>
+          {usage.breakdown.map((item) => (
+            <View key={item.label} style={styles.breakdownRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.breakdownLabel}>{item.label}</Text>
+                <Text style={styles.breakdownUnits}>
+                  {item.units.toLocaleString('it-IT', { maximumFractionDigits: 2 })} {item.unitLabel}
+                </Text>
+              </View>
+              <Text style={styles.breakdownCost}>${item.costUsd.toFixed(4)}</Text>
+            </View>
+          ))}
+          <View style={[styles.breakdownRow, { marginTop: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.sep, paddingTop: 6 }]}>
+            <Text style={[styles.breakdownLabel, { fontWeight: '600' }]}>Subtotale</Text>
+            <Text style={[styles.breakdownCost, { fontWeight: '700' }]}>
+              ${usage.breakdownSubtotalUsd.toFixed(4)}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -276,4 +299,21 @@ const styles = StyleSheet.create({
   disclaimer: {
     fontSize: 13, color: Colors.tertiary, lineHeight: 15, marginTop: 4, fontStyle: 'italic',
   },
+  breakdownSection: {
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.sep,
+    gap: 6,
+  },
+  breakdownTitle: {
+    fontSize: 13, color: Colors.secondary, textTransform: 'uppercase',
+    letterSpacing: 0.3, fontWeight: '500', marginBottom: 4,
+  },
+  breakdownRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  breakdownLabel: { fontSize: 15, color: Colors.label, fontWeight: '500' },
+  breakdownUnits: { fontSize: 12, color: Colors.tertiary, marginTop: 1 },
+  breakdownCost: { fontSize: 15, color: Colors.label, fontVariant: ['tabular-nums'] },
 });

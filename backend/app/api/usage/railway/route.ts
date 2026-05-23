@@ -110,14 +110,31 @@ export async function GET() {
     const currentUsageUsd: number = customer?.currentUsage ?? 0;
     const remainingIncludedUsd = Math.max(0, includedUsd - currentUsageUsd);
 
+    // Bill breakdown from published Railway pricing.
+    // API metrics: CPU_USAGE/MEMORY_USAGE_GB/DISK_USAGE_GB are in (m)inutely units,
+    // NETWORK_TX_GB is total GB.
+    const PRICE_PER_VCPU_MINUTE = 0.000463;
+    const PRICE_PER_GB_MEM_MINUTE = 0.000231;
+    const PRICE_PER_GB_EGRESS = 0.05;
+    const PRICE_PER_GB_VOLUME_MINUTE = 0.000003;
+
+    const cpuVal = map.CPU_USAGE ?? 0;
+    const memVal = map.MEMORY_USAGE_GB ?? 0;
+    const egressVal = map.NETWORK_TX_GB ?? 0;
+    const diskVal = map.DISK_USAGE_GB ?? 0;
+
+    const breakdown = [
+      { label: 'Memoria', units: memVal, unitLabel: 'GB·min', cost: memVal * PRICE_PER_GB_MEM_MINUTE },
+      { label: 'CPU', units: cpuVal, unitLabel: 'vCPU·min', cost: cpuVal * PRICE_PER_VCPU_MINUTE },
+      { label: 'Traffico in uscita', units: egressVal, unitLabel: 'GB', cost: egressVal * PRICE_PER_GB_EGRESS },
+      { label: 'Disco (Volume)', units: diskVal, unitLabel: 'GB·min', cost: diskVal * PRICE_PER_GB_VOLUME_MINUTE },
+    ];
+    const breakdownSubtotal = breakdown.reduce((a, b) => a + b.cost, 0);
+
     return Response.json({
       periodStart: customer?.billingPeriod?.start ?? startOfMonth.toISOString(),
       periodEnd: customer?.billingPeriod?.end ?? null,
       plan,
-      cpuHours: map.CPU_USAGE ?? null,
-      memoryGbHours: map.MEMORY_USAGE_GB ?? null,
-      networkEgressGb: map.NETWORK_TX_GB ?? null,
-      diskGb: map.DISK_USAGE_GB ?? null,
       currentUsageUsd,
       includedUsd,
       remainingIncludedUsd: Number(remainingIncludedUsd.toFixed(2)),
@@ -126,6 +143,13 @@ export async function GET() {
       hasExhaustedFreePlan: customer?.hasExhaustedFreePlan ?? null,
       isTrialing: customer?.isTrialing ?? null,
       trialDaysRemaining: customer?.trialDaysRemaining ?? null,
+      breakdown: breakdown.map((b) => ({
+        label: b.label,
+        units: Number(b.units.toFixed(2)),
+        unitLabel: b.unitLabel,
+        costUsd: Number(b.cost.toFixed(4)),
+      })),
+      breakdownSubtotalUsd: Number(breakdownSubtotal.toFixed(4)),
     });
   } catch (err) {
     console.error("GET /api/usage/railway error:", err);
