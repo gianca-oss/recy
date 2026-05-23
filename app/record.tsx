@@ -11,6 +11,14 @@ import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Colors, Fonts } from '../src/theme';
 
+const DAYS = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+const MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+function formatItalianDate(iso: string): string {
+  const d = new Date(iso);
+  return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 async function haptic(style: 'light' | 'medium' | 'success') {
   try {
     if (style === 'success') {
@@ -339,7 +347,7 @@ export default function RecordScreen() {
           </View>
         ) : (
           <>
-            <Text style={styles.subjectLabel}>{session.provisionalTitle}</Text>
+            <Text style={styles.dateLabel}>{formatItalianDate(session.startedAt)}</Text>
             <Text style={styles.timer}>
               {hh}:{mm}
               <Text style={{ color: Colors.tertiary }}>:{ss}</Text>
@@ -512,9 +520,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  subjectLabel: {
+  dateLabel: {
     fontSize: 16,
     color: Colors.secondary,
+    fontWeight: '500',
   },
   timer: {
     ...Fonts.timer,
