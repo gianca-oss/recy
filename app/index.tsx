@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, Alert,
+  View, Text, FlatList, SectionList, TouchableOpacity, Alert,
   StyleSheet, SafeAreaView, TextInput, RefreshControl,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -199,6 +199,7 @@ export default function HomeScreen() {
   const filtered = searchQuery.trim()
     ? searchResults.map((m) => m.recording)
     : recordings;
+  const sections = !searchQuery.trim() ? groupByDate(filtered) : null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -274,6 +275,33 @@ export default function HomeScreen() {
               : 'Premi il pulsante in basso\nper iniziare a registrare'}
           </Text>
         </View>
+      ) : sections ? (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section }) => (
+            <Text style={styles.sectionHeader}>{section.title}</Text>
+          )}
+          renderItem={({ item, index, section }) => (
+            <RecordingRow
+              recording={item}
+              isLast={index === section.data.length - 1}
+              onPress={() => {
+                if (selectMode) toggleSelected(item.id);
+                else router.push(`/recording/${item.id}`);
+              }}
+              onLongPress={() => {
+                if (!selectMode) toggleSelected(item.id);
+              }}
+              selected={selectMode ? selectedIds.has(item.id) : undefined}
+            />
+          )}
+        />
       ) : (
         <FlatList
           data={filtered}
@@ -305,9 +333,7 @@ export default function HomeScreen() {
             );
           }}
           ListHeaderComponent={
-            <Text style={styles.sectionHeader}>
-              {searchQuery ? `${filtered.length} risultati` : 'Recenti'}
-            </Text>
+            <Text style={styles.sectionHeader}>{`${filtered.length} risultati`}</Text>
           }
         />
       )}
@@ -324,6 +350,33 @@ export default function HomeScreen() {
       </View>
     </SafeAreaView>
   );
+}
+
+function groupByDate(recordings: Recording[]) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterday = today - 86400000;
+  const week = today - 6 * 86400000;
+  const month = today - 30 * 86400000;
+
+  const buckets: { title: string; data: Recording[] }[] = [
+    { title: 'Oggi', data: [] },
+    { title: 'Ieri', data: [] },
+    { title: 'Ultimi 7 giorni', data: [] },
+    { title: 'Questo mese', data: [] },
+    { title: 'Più vecchio', data: [] },
+  ];
+
+  for (const rec of recordings) {
+    const d = new Date(rec.recordedAt);
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    if (day >= today) buckets[0].data.push(rec);
+    else if (day >= yesterday) buckets[1].data.push(rec);
+    else if (day >= week) buckets[2].data.push(rec);
+    else if (day >= month) buckets[3].data.push(rec);
+    else buckets[4].data.push(rec);
+  }
+  return buckets.filter((b) => b.data.length > 0);
 }
 
 function formatElapsed(seconds: number): string {

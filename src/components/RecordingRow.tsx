@@ -119,6 +119,9 @@ export default function RecordingRow({ recording, onPress, onLongPress, isLast, 
               <Text style={styles.meta}>
                 {formatDuration(recording.durationSeconds)} · {formatDate(recording.recordedAt)}
               </Text>
+              {recording.offlineAudioPath && (
+                <Ionicons name="arrow-down-circle" size={13} color={Colors.secondary} style={{ marginLeft: 4 }} />
+              )}
             </>
           )}
         </View>
