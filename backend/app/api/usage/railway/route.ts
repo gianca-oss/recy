@@ -47,7 +47,7 @@ export async function GET() {
         measurement
         value
       }
-      workspace(id: $workspaceId) {
+      workspace(workspaceId: $workspaceId) {
         plan
         customer {
           currentUsage
