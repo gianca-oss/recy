@@ -211,9 +211,8 @@ export default function RecordingDetailScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={startEditTitle} activeOpacity={0.6} style={styles.titleRow}>
+            <TouchableOpacity onPress={startEditTitle} activeOpacity={0.6}>
               <Text style={styles.title}>{recording.title}</Text>
-              <Ionicons name="pencil" size={18} color={Colors.secondary} />
             </TouchableOpacity>
           )}
 
@@ -262,16 +261,9 @@ export default function RecordingDetailScreen() {
 
           {displayedTranscript !== null && (
             <View style={styles.transcriptCard}>
-              <View style={styles.transcriptHeader}>
-                <Text style={styles.sectionLabel}>
-                  Trascrizione{hasEdits ? ' · modificata' : ''}
-                </Text>
-                {!editingTranscript && (
-                  <TouchableOpacity onPress={startEditTranscript} hitSlop={6}>
-                    <Ionicons name="pencil" size={18} color={Colors.accent} />
-                  </TouchableOpacity>
-                )}
-              </View>
+              <Text style={styles.sectionLabel}>
+                Trascrizione{hasEdits ? ' · modificata' : ''}
+              </Text>
 
               {editingTranscript ? (
                 <>
@@ -303,7 +295,9 @@ export default function RecordingDetailScreen() {
                   </View>
                 </>
               ) : (
-                <Text style={styles.transcriptText} selectable>{displayedTranscript}</Text>
+                <TouchableOpacity onPress={startEditTranscript} activeOpacity={0.6}>
+                  <Text style={styles.transcriptText} selectable>{displayedTranscript}</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
