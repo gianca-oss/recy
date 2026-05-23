@@ -12,7 +12,9 @@
       "bundleIdentifier": "com.recy.app",
       "infoPlist": {
         "UIBackgroundModes": ["audio"],
-        "NSMicrophoneUsageDescription": "L'app ha bisogno del microfono per registrare le lezioni."
+        "NSMicrophoneUsageDescription": "L'app ha bisogno del microfono per registrare le lezioni.",
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
       }
     },
     "android": {
