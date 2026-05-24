@@ -1,10 +1,29 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import ServiceWorker from "./ServiceWorker";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Recy",
   description: "Registrazioni · trascrizioni · riassunti",
+  applicationName: "Recy",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Recy",
+  },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#27272A",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -60,7 +79,10 @@ export default function RootLayout({
       }}
     >
       <html lang="it">
-        <body>{children}</body>
+        <body>
+          <ServiceWorker />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );
